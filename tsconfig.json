@@ -7,6 +7,8 @@
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
+    // Explicitly load Bun and Node globals so import.meta.dir, process, Buffer etc. resolve
+    "types": ["@types/bun", "@types/node"],
 
     // Bundler mode
     "moduleResolution": "bundler",

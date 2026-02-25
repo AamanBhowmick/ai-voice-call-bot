@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Voice Agent — Try Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:     #4caf7d;
+      --green-d:   #3a9469;
+      --green-l:   #e8f5ef;
+      --green-pill:#d4eddf;
+      --text-dark: #1a2e22;
+      --text-mid:  #3e5c4a;
+      --text-soft: #6b8c78;
+      --radius:    20px;
+      --shadow:    0 8px 40px rgba(60,120,80,.12);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0faf4;
+      padding: 24px;
+    }
+
+    /* ── Page wrapper ── */
+    .page {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* ── Hero card ── */
+    .card {
+      background: linear-gradient(145deg, #edfbf4 0%, #f4fef8 40%, #e6f7ee 100%);
+      border: 1.5px solid rgba(76,175,125,.22);
+      border-radius: var(--radius);
+      padding: 64px 56px 56px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    /* Circuit pattern SVG overlays */
+    .card::before, .card::after {
+      content: '';
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cpath d='M10 100 h40 v-40 h40 v40 h20 v-60 h40 v60 h10' stroke='%234caf7d22' stroke-width='1.5' fill='none'/%3E%3Cpath d='M10 130 h30 v30 h60 v-30 h40 v30 h30' stroke='%234caf7d18' stroke-width='1' fill='none'/%3E%3Ccircle cx='50' cy='100' r='3' fill='%234caf7d33'/%3E%3Ccircle cx='90' cy='60' r='3' fill='%234caf7d33'/%3E%3Ccircle cx='130' cy='100' r='3' fill='%234caf7d33'/%3E%3Ccircle cx='170' cy='100' r='3' fill='%234caf7d33'/%3E%3C/svg%3E");
+      background-size: cover;
+      opacity: .7;
+      pointer-events: none;
+    }
+    .card::before { top: -60px; right: -60px; transform: rotate(15deg); }
+    .card::after  { bottom: -60px; left: -60px; transform: rotate(-15deg) scaleX(-1); }
+
+    /* ── Content ── */
+    .content { position: relative; z-index: 1; }
+
+    /* Pill badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green-pill);
+      border: 1px solid rgba(76,175,125,.3);
+      border-radius: 100px;
+      padding: 7px 18px;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 36px;
+      letter-spacing: .02em;
+    }
+    .badge-dot {
+      width: 10px; height: 10px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(76,175,125,.25);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(76,175,125,.25); }
+      50% { box-shadow: 0 0 0 6px rgba(76,175,125,.1); }
+    }
+
+    /* Heading */
+    .heading {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      color: var(--text-dark);
+      line-height: 1.15;
+      margin-bottom: 14px;
+      max-width: 560px;
+    }
+    .heading span { color: var(--green-d); }
+
+    .subtext {
+      font-size: 1.05rem;
+      color: var(--text-soft);
+      max-width: 480px;
+      line-height: 1.65;
+      margin-bottom: 40px;
+    }
+
+    /* ── Input row ── */
+    .input-row {
+      display: flex;
+      gap: 12px;
+      max-width: 600px;
+      margin-bottom: 36px;
+    }
+    .phone-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border: 1.5px solid #d4e8dc;
+      border-radius: 14px;
+      padding: 0 20px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .phone-wrap:focus-within {
+      border-color: var(--green);
+      box-shadow: 0 0 0 4px rgba(76,175,125,.12);
+    }
+    .flag {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .phone-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--text-dark);
+      background: transparent;
+      padding: 17px 0;
+    }
+    .phone-input::placeholder { color: #a8c4b4; }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--green), var(--green-d));
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 17px 28px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(76,175,125,.35);
+      transition: transform .15s, box-shadow .15s, background .2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(76,175,125,.45);
+    }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled {
+      opacity: .7; cursor: not-allowed; transform: none;
+    }
+
+    /* Phone icon inside button */
+    .btn-icon { width: 20px; height: 20px; }
+
+    /* ── Feature pills ── */
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 28px;
+    }
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .feat-icon {
+      width: 38px; height: 38px;
+      background: var(--green-pill);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+    .feat-text { font-size: .9rem; font-weight: 600; color: var(--text-dark); line-height: 1.3; }
+    .feat-text small { display: block; font-weight: 400; color: var(--text-soft); font-size: .78rem; }
+
+    /* ── Status toast ── */
+    .toast {
+      display: none;
+      margin-top: 16px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: .9rem;
+      font-weight: 500;
+      animation: slideIn .3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast.success { background: #d4eddf; color: #1a5c34; border: 1px solid #a8d9bc; display: block; }
+    .toast.error   { background: #fde8e8; color: #7f1d1d; border: 1px solid #f5b8b8; display: block; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ── */
+    @media (max-width: 580px) {
+      .card { padding: 40px 28px; }
+      .input-row { flex-direction: column; }
+      .btn { justify-content: center; }
+      .features { gap: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div class="content">
+
+        <!-- Badge -->
+        <div class="badge">
+          <span class="badge-dot"></span>
+          AI Voice Agent — Live Demo
+        </div>
+
+        <!-- Heading -->
+        <h1 class="heading">Talk to an <span>AI Agent</span><br>in under 30 seconds</h1>
+        <p class="subtext">
+          Enter your phone number and we'll call you right back —
+          experience a fully autonomous AI voice conversation powered by Azure.
+        </p>
+
+        <!-- Input + button -->
+        <div class="input-row">
+          <div class="phone-wrap">
+            <span class="flag">🇮🇳</span>
+            <input
+              id="phoneInput"
+              class="phone-input"
+              type="tel"
+              placeholder="Enter your phone number"
+              maxlength="15"
+              autocomplete="tel"
+            />
+          </div>
+          <button class="btn" id="demoBtn" onclick="requestDemo()">
+            <span class="spinner" id="spinner"></span>
+            <svg class="btn-icon" id="phoneIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+            </svg>
+            Try Demo
+          </button>
+        </div>
+
+        <!-- Status toast -->
+        <div class="toast" id="toast"></div>
+
+        <!-- Feature icons -->
+        <div class="features">
+          <div class="feature">
+            <div class="feat-icon">🎙️</div>
+            <div class="feat-text">
+              AI in Your Voice
+              <small>Natural speech synthesis</small>
+            </div>
+          </div>
+          <div class="feature">
+            <div class="feat-icon">🕐</div>
+            <div class="feat-text">
+              Available 24/7
+              <small>No wait times, ever</small>
+            </div>
+          </div>
+          <div class="feature">
+            <div class="feat-icon">🌐</div>
+            <div class="feat-text">
+              Multilingual
+              <small>50+ languages supported</small>
+            </div>
+          </div>
+          <div class="feature">
+            <div class="feat-icon">⚡</div>
+            <div class="feat-text">
+              &lt; 1s Latency
+              <small>Real-time AI responses</small>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const phoneInput = document.getElementById('phoneInput');
+    const demoBtn    = document.getElementById('demoBtn');
+    const spinner    = document.getElementById('spinner');
+    const phoneIcon  = document.getElementById('phoneIcon');
+    const toast      = document.getElementById('toast');
+
+    // Auto-format: strip non-digits, keep + at start
+    phoneInput.addEventListener('input', () => {
+      let v = phoneInput.value.replace(/[^\d+]/g, '');
+      if (!v.startsWith('+') && v.length > 0) v = '+' + v;
+      phoneInput.value = v;
+    });
+
+    async function requestDemo() {
+      const phone = phoneInput.value.trim();
+
+      // Basic validation
+      if (!/^\+?[\d\s\-]{7,15}$/.test(phone)) {
+        showToast('Please enter a valid phone number (e.g. +919876543210)', 'error');
+        phoneInput.focus();
+        return;
+      }
+
+      setLoading(true);
+      hideToast();
+
+      try {
+        const res = await fetch('/api/outbound-call', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber: phone }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok) {
+          showToast(`✅ Calling ${phone} now — pick up in a few seconds!`, 'success');
+          phoneInput.value = '';
+        } else {
+          showToast(data.error ?? 'Something went wrong. Please try again.', 'error');
+        }
+      } catch {
+        showToast('Network error — is the server running?', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Allow Enter key to submit
+    phoneInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') requestDemo();
+    });
+
+    function setLoading(on) {
+      demoBtn.disabled = on;
+      spinner.style.display  = on ? 'block' : 'none';
+      phoneIcon.style.display = on ? 'none' : 'block';
+    }
+
+    function showToast(msg, type) {
+      toast.textContent = msg;
+      toast.className = `toast ${type}`;
+    }
+
+    function hideToast() {
+      toast.className = 'toast';
+    }
+  </script>
+</body>
+</html>
