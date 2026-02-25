@@ -782,6 +782,207 @@ app.<span class="fn">post</span>(<span class="str">'/api/incoming-call'</span>, 
   </div><!-- /phase-grid -->
 </div><!-- /guide-wrap -->
 
+<!-- ── SECURITY & SCALABILITY ── -->
+<div class="guide-wrap" style="margin-top:32px;">
+  <div class="guide-title">🔒 Security &amp; Scalability Analysis</div>
+  <p class="guide-sub">Production concerns you must address before going live with thousands of calls</p>
+
+  <div class="phase-grid">
+
+    <!-- SEC 1 -->
+    <div class="phase" id="sec1">
+      <div class="phase-header" onclick="togglePhase('sec1')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);">⚠</div>
+        <div class="phase-info">
+          <div class="phase-name">Unauthenticated Webhook Endpoint</div>
+          <div class="phase-desc">Anyone who finds your URL can POST fake call events and drain your credits</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>The risk:</strong> Your <code>/api/incoming-call</code> endpoint is publicly accessible with no authentication. An attacker who discovers the URL can send fake <code>IncomingCall</code> events, causing your bot to answer phantom calls — costing you money, CPU, and API quota on every fake request.</div>
+          <div class="phase-section-title">Fix — Validate the Event Grid Secret</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">In your Event Grid subscription → <strong>Additional Features</strong> → add a <strong>Delivery property</strong> header: key = <code>aeg-sas-key</code>, value = a long random secret you generate.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> Event Grid will include this header on every POST to your webhook. Only requests with the correct header are legitimate.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Store your secret as an App Service env var: <code>WEBHOOK_SECRET=&lt;your-random-string&gt;</code>.</div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Add this check at the top of your handler:<br></div></div>
+          <div class="pcode"><span class="kw">const</span> secret = req.headers[<span class="str">'aeg-sas-key'</span>];
+<span class="kw">if</span> (secret !== process.env.WEBHOOK_SECRET) {
+  <span class="kw">return</span> res.<span class="fn">sendStatus</span>(401); <span class="cmt">// Reject unknown callers immediately</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEC 2 -->
+    <div class="phase" id="sec2">
+      <div class="phase-header" onclick="togglePhase('sec2')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#78350f,#f59e0b);">🔑</div>
+        <div class="phase-info">
+          <div class="phase-name">Connection String Exposure</div>
+          <div class="phase-desc">A leaked ACS connection string lets attackers make calls billed to your account</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>The risk:</strong> If your <code>ACS_CONNECTION_STRING</code> is ever accidentally logged, committed to Git, or exposed in an error, attackers can use it to place outbound calls, read call metadata, and run up a large bill — all authenticated as you.</div>
+          <div class="phase-section-title">Fix — Use Azure Key Vault + Managed Identity</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Create an <strong>Azure Key Vault</strong> resource in <code>rg-voice-bot</code>. Store your connection string as a secret inside it.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why Key Vault:</em> Secrets are encrypted at rest, access is audited, and you can rotate them without changing your code or redeploying.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Enable <strong>Managed Identity</strong> on your App Service: App Service → <strong>Identity</strong> → System assigned → <strong>On</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why Managed Identity:</em> Your app gets an Azure AD identity and can read Key Vault secrets automatically — no password or connection string in your App Settings at all.</span></div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">In App Settings, replace the raw connection string with a Key Vault reference: <code>@Microsoft.KeyVault(SecretUri=https://your-vault.vault.azure.net/secrets/ACSConnectionString/)</code></div></div>
+          <div class="ptip"><span class="ptip-icon">💡</span>As an immediate quick fix before setting up Key Vault: make sure your <code>.env</code> file is in <code>.gitignore</code> and never pushed to GitHub.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEC 3 -->
+    <div class="phase" id="sec3">
+      <div class="phase-header" onclick="togglePhase('sec3')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#1e3a8a,#3b82f6);">🛡</div>
+        <div class="phase-info">
+          <div class="phase-name">No Rate Limiting — DoS Risk</div>
+          <div class="phase-desc">A flood of fake requests can exhaust your server and block real calls</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>The risk:</strong> Without rate limiting, a single attacker (or a misconfigured client) can fire thousands of requests per second at your webhook, saturating your App Service CPU and memory — making your bot unresponsive to real incoming calls.</div>
+          <div class="phase-section-title">Fix — Add Rate Limiting Middleware</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Install: <code>npm install express-rate-limit</code></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Add to your server:</div></div>
+          <div class="pcode"><span class="kw">const</span> rateLimit = <span class="fn">require</span>(<span class="str">'express-rate-limit'</span>);
+app.<span class="fn">use</span>(<span class="str">'/api/'</span>, <span class="fn">rateLimit</span>({
+  windowMs: 60 * 1000, <span class="cmt">// 1 minute window</span>
+  max: 100,            <span class="cmt">// max 100 requests per IP per minute</span>
+  message: <span class="str">'Too many requests'</span>
+}));</div>
+          <div class="ptip"><span class="ptip-icon">💡</span>For production, also add <strong>Azure API Management (APIM)</strong> in front of your App Service — it provides enterprise-grade rate limiting, IP allowlisting, and usage analytics at the gateway level.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEC 4 -->
+    <div class="phase" id="sec4">
+      <div class="phase-header" onclick="togglePhase('sec4')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#064e3b,#059669);">🎙</div>
+        <div class="phase-info">
+          <div class="phase-name">Audio Data Privacy (PII / GDPR)</div>
+          <div class="phase-desc">Every caller's voice is PII — it must be handled with legal care</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>The risk:</strong> The PCM audio of every caller flows through your server and into your AI pipeline. Voice data is legally classified as <strong>Personally Identifiable Information (PII)</strong> in GDPR (EU), CCPA (California), and HIPAA (healthcare). Mishandling it can result in large fines.</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text"><strong>Do not log or store raw audio</strong> unless you have explicit user consent and a documented retention/deletion policy.<br><span style="color:#4a6080;font-size:.68rem">↳ Storing even 10 seconds of audio per call at 1,000 calls/day = gigabytes of legally sensitive data that must be encrypted, access-controlled, and eventually deleted.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">If storing transcripts: encrypt at rest (Azure Storage Service Encryption is on by default) and set an <strong>automatic deletion policy</strong> (e.g., delete after 30 days).</div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Play a <strong>consent recording</strong> at the start of every call: <em>"This call may be processed by AI. Press 1 to continue or hang up to decline."</em><br><span style="color:#4a6080;font-size:.68rem">↳ This is legally required in many jurisdictions and provides a documented consent event.</span></div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Check whether your STT/LLM providers (Google, OpenAI, etc.) use your data to train models. Opt out or use enterprise tiers with <strong>data processing agreements (DPAs)</strong> if required.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEC 5 -->
+    <div class="phase" id="sec5">
+      <div class="phase-header" onclick="togglePhase('sec5')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#581c87,#9333ea);">🔌</div>
+        <div class="phase-info">
+          <div class="phase-name">Unauthenticated WebSocket Connections</div>
+          <div class="phase-desc">Any client can open a socket to your audio endpoint without proving it's ACS</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>The risk:</strong> Your <code>wss://yourserver.com/audio</code> endpoint has no token check. Anyone can open a WebSocket to it and either inject fake audio or consume server resources by holding idle connections open.</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">When your webhook answers a call, store the <code>callConnectionId</code> in a short-lived cache (Redis or in-memory Map with a TTL).<br><span style="color:#4a6080;font-size:.68rem">↳ When ACS connects to your WebSocket, it sends a metadata frame with this ID. Only IDs you recognise are real ACS connections.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">On WebSocket connection, read the first message frame, extract <code>callConnectionId</code>, and validate it exists in your cache. Close the socket immediately if not found.</div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Remove the ID from cache once the WebSocket closes to prevent reuse.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCALE 1 -->
+    <div class="phase" id="scl1">
+      <div class="phase-header" onclick="togglePhase('scl1')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#0c4a6e,#0ea5e9);">📈</div>
+        <div class="phase-info">
+          <div class="phase-name">Scalability — The Core Problem</div>
+          <div class="phase-desc">Why a single App Service collapses under thousands of concurrent calls</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>The hard wall:</strong> Each active call holds one <strong>persistent WebSocket connection</strong> to your server. At 1,000 concurrent calls that's 1,000 open sockets + ~128 MB/s of continuous PCM audio data + 1,000 simultaneous STT/LLM/TTS API requests. A single App Service B1 instance (1 core, 1.75 GB RAM) will collapse well before 100 concurrent calls.</div>
+          <div class="phase-section-title">Why WebSockets are Hard to Scale</div>
+          <div class="pstep"><div class="pstep-num">①</div><div class="pstep-text"><strong>Stateful connections:</strong> Unlike HTTP, a WebSocket stays open for the entire duration of a call (minutes). The exact same server instance must handle all packets for that call — you can't round-robin them to different servers mid-call.<br><span style="color:#4a6080;font-size:.68rem">↳ This is called the "sticky session" problem. Standard load balancers break it unless configured specifically for WebSocket affinity.</span></div></div>
+          <div class="pstep"><div class="pstep-num">②</div><div class="pstep-text"><strong>Memory per connection:</strong> Each WebSocket connection holds input/output buffers, a PCM audio buffer, STT client state, and LLM conversation history. At 1,000 calls this easily exceeds 4–8 GB RAM.<br><span style="color:#4a6080;font-size:.68rem">↳ Every dropped connection = a dropped call. The caller hears silence and the AI goes unresponsive.</span></div></div>
+          <div class="pstep"><div class="pstep-num">③</div><div class="pstep-text"><strong>API rate limits:</strong> STT, LLM, and TTS providers enforce concurrent request limits. At 1,000 calls you'll hit these limits within seconds — calls will queue, latency spikes, and callers hear unnatural pauses.</div></div>
+          <table class="ptable" style="margin-top:12px;">
+            <tr><th>Concurrent Calls</th><th>Recommended Setup</th><th style="color:#3a5270;font-size:.64rem">Est. Monthly Cost</th></tr>
+            <tr><td>1 – 20</td><td>Single App Service B2 (current setup)</td><td style="color:#3a5270;font-size:.68rem">~$30/mo</td></tr>
+            <tr><td>20 – 100</td><td>App Service <strong>Scale-out</strong> to 5–10 instances</td><td style="color:#3a5270;font-size:.68rem">~$150–300/mo</td></tr>
+            <tr><td>100 – 1,000</td><td><strong>Azure Container Apps</strong> with autoscaling</td><td style="color:#3a5270;font-size:.68rem">~$500–2,000/mo</td></tr>
+            <tr><td>1,000+</td><td><strong>Azure Kubernetes Service (AKS)</strong> + Service Bus queue</td><td style="color:#3a5270;font-size:.68rem">~$2,000+/mo</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCALE 2 -->
+    <div class="phase" id="scl2">
+      <div class="phase-header" onclick="togglePhase('scl2')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#1e3a8a,#6366f1);">🏗</div>
+        <div class="phase-info">
+          <div class="phase-name">Production-Scale Architecture</div>
+          <div class="phase-desc">How to redesign for thousands of simultaneous calls using Azure-native services</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="ptip"><span class="ptip-icon">💡</span><strong>Key principle:</strong> Split the <em>stateless</em> webhook receiver from the <em>stateful</em> audio workers. Connect them with a message queue so a traffic spike can't crash either layer.</div>
+          <div class="phase-section-title">Step 1 — Decouple Webhook from Audio Processing</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Your webhook (<code>/api/incoming-call</code>) should <strong>only</strong>: validate the event, answer the call via SDK, push a job to <strong>Azure Service Bus</strong>, and return 200 immediately.<br><span style="color:#4a6080;font-size:.68rem">↳ This makes the webhook stateless. It can scale to hundreds of instances behind a load balancer with no WebSocket affinity concerns.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Deploy <strong>Audio Worker Pods</strong> (Container Apps or AKS pods) that each pick one job from Service Bus and own that call's WebSocket + STT + LLM + TTS pipeline until the call ends.<br><span style="color:#4a6080;font-size:.68rem">↳ Each pod handles exactly one call. You scale the number of pods to match the number of concurrent calls. No sticky session problem.</span></div></div>
+          <div class="phase-section-title">Step 2 — Auto-Scale Audio Workers</div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Configure <strong>KEDA (Kubernetes Event-Driven Autoscaler)</strong> on AKS — or Container Apps' built-in scaling rules — to scale worker pod count based on the Service Bus queue depth.<br><span style="color:#4a6080;font-size:.68rem">↳ When 500 calls come in simultaneously, 500 pods spin up automatically. When calls end, pods scale back to zero. You only pay for what you use.</span></div></div>
+          <div class="phase-section-title">Step 3 — Handle API Rate Limits</div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Use <strong>multiple API keys</strong> (across different accounts or projects) rotated via a pool, or self-host open-source models:<br>
+            • STT: <strong>Faster-Whisper</strong> running on GPU VMs (no per-request cost)<br>
+            • LLM: <strong>Azure OpenAI</strong> with provisioned throughput (predictable capacity)<br>
+            • TTS: <strong>Azure Neural TTS</strong> with dedicated capacity tiers</div></div>
+          <div class="phase-section-title">Target Architecture Diagram</div>
+          <div class="pcode">Caller (PSTN)
+    │
+    ▼
+Azure Communication Services
+    │  IncomingCall event
+    ▼
+Azure Event Grid
+    │  HTTPS POST
+    ▼
+<span class="fn">Webhook Service</span>  (Container Apps — stateless, scale 0→N)
+    │  answerCall() + enqueue job
+    ▼
+<span class="str">Azure Service Bus Queue</span>  ← decouples burst traffic
+    │  workers pull jobs
+    ▼
+<span class="fn">Audio Worker Pods</span>  (AKS — 1 pod per call, scale with KEDA)
+    │   WebSocket ↔ PCM audio ↔ STT → LLM → TTS
+    ▼
+Caller hears AI response</div>
+          <div class="pnote"><span class="pnote-icon">ℹ</span>For 1,000 simultaneous calls you'll also need to request <strong>ACS quota increases</strong> from Microsoft — the default limit is 10 concurrent calls per resource. Submit a support ticket at portal.azure.com to raise it.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /phase-grid -->
+</div><!-- /sec-scalability-wrap -->
+
 <script>
 function togglePhase(id) {
   const el = document.getElementById(id);
