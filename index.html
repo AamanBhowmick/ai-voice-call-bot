@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ACS Custom Webhook — Animated Data Flow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:'Inter',sans-serif;
+      background: radial-gradient(ellipse at 25% 15%, #0e1628 0%, #07091a 70%);
+      color:#e2e8f0;
+      min-height:100vh;
+      display:flex; flex-direction:column; align-items:center;
+      padding:36px 16px 60px;
+    }
+    h1 {
+      font-size:1.65rem; font-weight:700;
+      background: linear-gradient(135deg,#60a5fa,#a78bfa 45%,#34d399);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      text-align:center; margin-bottom:5px;
+    }
+    .sub { color:#475569; font-size:0.78rem; text-align:center; margin-bottom:26px; letter-spacing:.5px; }
+    .controls { display:flex; gap:10px; margin-bottom:24px; }
+    .btn {
+      padding:9px 24px; border-radius:9px; border:none; cursor:pointer;
+      font-family:'Inter',sans-serif; font-size:0.82rem; font-weight:600;
+      transition:all .2s;
+    }
+    .btn-play  { background:linear-gradient(135deg,#3b82f6,#6366f1); color:#fff; box-shadow:0 4px 18px rgba(99,102,241,.3); }
+    .btn-reset { background:#141e35; color:#64748b; border:1px solid #1e293b; }
+    .btn:hover { transform:translateY(-2px); filter:brightness(1.1); }
+
+    /* ── Two-column side-by-side layout ── */
+    .main-layout {
+      width:100%; max-width:1400px;
+      display:flex; gap:16px; align-items:flex-start;
+    }
+
+    /* SVG wrapper — left column */
+    .svg-col {
+      flex: 0 0 58%;
+      min-width: 0;
+    }
+    .svg-wrap {
+      width:100%;
+      background:linear-gradient(145deg,#0c1322,#0e1628);
+      border:1px solid #1a2540;
+      border-radius:22px;
+      box-shadow:0 28px 80px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.04);
+      overflow:hidden;
+    }
+    .svg-wrap svg { display:block; width:100%; height:auto; }
+
+    /* Step cards — right column */
+    .steps-col {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    /* Arrow animation classes */
+    .arrow { fill:none; stroke-linecap:round; stroke-linejoin:round; opacity:0; transition:opacity .35s; }
+    .arrow.active  { opacity:1; stroke-dasharray:10 6; animation:dashMove .7s linear infinite; }
+    .arrow.done    { opacity:.38; stroke-dasharray:none; animation:none; }
+    @keyframes dashMove { to { stroke-dashoffset:-16; } }
+
+    .alabel { opacity:0; transition:opacity .35s .2s; }
+    .alabel.active { opacity:1; }
+    .alabel.done   { opacity:.4; }
+
+    /* Node glow — driven via filter animate */
+    .node-glow { opacity:0; transition:opacity .4s; }
+    .node-glow.active { opacity:1; animation:glowPulse 1s ease-in-out infinite alternate; }
+    @keyframes glowPulse { from{opacity:.5} to{opacity:1} }
+
+    /* Step cards */
+    .step-section { width:100%; }
+    .steps-title {
+      font-size:.68rem; font-weight:700; letter-spacing:1.4px;
+      color:#253450; text-transform:uppercase; margin-bottom:10px;
+    }
+    .step-grid {
+      display:flex; flex-direction:column; gap:7px;
+    }
+    .sc {
+      display:flex; align-items:flex-start; gap:10px;
+      padding:11px 14px; border-radius:11px;
+      background:#090f1e; border:1px solid #161f38;
+      opacity:.3; transition:opacity .4s,border-color .4s,background .4s,box-shadow .4s;
+    }
+    .sc.active { opacity:1; border-color:#3b82f6; background:#0b1630; box-shadow:0 4px 20px rgba(59,130,246,.12); }
+    .sc.done   { opacity:.65; border-color:#10b981; background:#071811; }
+    .sn {
+      min-width:26px; height:26px; border-radius:7px; background:#121d33;
+      display:flex; align-items:center; justify-content:center;
+      font-size:.7rem; font-weight:700; color:#2d3f5e; flex-shrink:0;
+      transition:background .3s,color .3s;
+    }
+    .sc.active .sn { background:#3b82f6; color:#fff; }
+    .sc.done   .sn { background:#10b981; color:#fff; }
+    .st { font-size:.75rem; line-height:1.5; color:#4a5e7a; padding-top:3px; }
+    .st strong { color:#7a96bc; font-weight:600; }
+    .sc.active .st { color:#7a96bc; }
+    .sc.active .st strong { color:#e2e8f0; }
+
+    .legend { display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-start; margin-top:14px; }
+    .li { display:flex; align-items:center; gap:6px; font-size:.66rem; color:#2d3f5e; }
+    .ld { width:7px; height:7px; border-radius:50%; }
+
+    @media (max-width: 860px) {
+      .main-layout { flex-direction: column; }
+      .svg-col { flex: none; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>ACS + Custom Webhook — Animated Data Flow</h1>
+<p class="sub">Azure Communication Services · Custom Webhook · AI Voice Agent Architecture</p>
+
+<div class="controls">
+  <button class="btn btn-play" id="btnPlay" onclick="startAnim()">▶ Play Flow</button>
+  <button class="btn btn-reset" onclick="resetAnim()">↺ Reset</button>
+</div>
+
+<!-- ── SIDE-BY-SIDE LAYOUT ── -->
+<div class="main-layout">
+
+<!-- LEFT: SVG diagram -->
+<div class="svg-col">
+<div class="svg-wrap">
+<svg viewBox="0 0 960 460" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- glow filters per colour -->
+    <filter id="gBlue"  x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="gPurp"  x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="gGreen" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="gAmber" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="gSky"   x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="gPink"  x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="gIndi"  x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+
+    <!-- Arrowhead markers -->
+    <marker id="ah-blue"   markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0 0,8 4,0 8" fill="#3b82f6"/></marker>
+    <marker id="ah-purple" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0 0,8 4,0 8" fill="#9333ea"/></marker>
+    <marker id="ah-green"  markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0 0,8 4,0 8" fill="#10b981"/></marker>
+    <marker id="ah-amber"  markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0 0,8 4,0 8" fill="#f59e0b"/></marker>
+    <marker id="ah-sky"    markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0 0,8 4,0 8" fill="#0ea5e9"/></marker>
+    <marker id="ah-pink"   markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0 0,8 4,0 8" fill="#ec4899"/></marker>
+    <marker id="ah-indigo" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0 0,8 4,0 8" fill="#6366f1"/></marker>
+
+    <!-- Node gradients -->
+    <linearGradient id="gBlueN"   x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1e3a8a"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient>
+    <linearGradient id="gAmberN"  x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#78350f"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient>
+    <linearGradient id="gPurpN"   x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#581c87"/><stop offset="100%" stop-color="#9333ea"/></linearGradient>
+    <linearGradient id="gGreenN"  x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#064e3b"/><stop offset="100%" stop-color="#059669"/></linearGradient>
+    <linearGradient id="gSkyN"    x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0c4a6e"/><stop offset="100%" stop-color="#0ea5e9"/></linearGradient>
+    <linearGradient id="gPinkN"   x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#701a75"/><stop offset="100%" stop-color="#ec4899"/></linearGradient>
+  </defs>
+
+  <!-- ─── BACKGROUND GRID DOTS ─── -->
+  <pattern id="dots" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+    <circle cx="1.5" cy="1.5" r="1" fill="#1a2540"/>
+  </pattern>
+  <rect width="960" height="460" fill="url(#dots)" opacity=".5"/>
+
+  <!-- ─── ARROWS ─── -->
+
+  <!-- A1: PSTN → ACS -->
+  <path id="a1" class="arrow" stroke="#3b82f6" stroke-width="2.4" marker-end="url(#ah-blue)"
+        d="M 162 110 C 210 110, 250 110, 298 110"/>
+  <text id="l1" class="alabel" x="230" y="99" fill="#3b82f6" font-family="Inter" font-size="11" font-weight="600" text-anchor="middle">PSTN Call</text>
+
+  <!-- A2: ACS → Event Grid -->
+  <path id="a2" class="arrow" stroke="#9333ea" stroke-width="2.4" marker-end="url(#ah-purple)"
+        d="M 418 110 C 466 110, 510 110, 558 110"/>
+  <text id="l2" class="alabel" x="488" y="99" fill="#9333ea" font-family="Inter" font-size="11" font-weight="600" text-anchor="middle">IncomingCall Event</text>
+
+  <!-- A3: Event Grid → Custom Webhook -->
+  <path id="a3" class="arrow" stroke="#10b981" stroke-width="2.4" marker-end="url(#ah-green)"
+        d="M 678 110 C 726 110, 770 110, 818 110"/>
+  <text id="l3" class="alabel" x="748" y="99" fill="#10b981" font-family="Inter" font-size="11" font-weight="600" text-anchor="middle">HTTPS POST</text>
+
+  <!-- A4: Webhook → ACS (curved bottom arc — goes down, left, up) -->
+  <path id="a4" class="arrow" stroke="#f59e0b" stroke-width="2.4" marker-end="url(#ah-amber)"
+        d="M 858 152 C 858 210, 860 230, 860 250 C 860 280, 380 290, 360 270 C 358 262, 358 240, 358 165"/>
+  <text id="l4" class="alabel" x="620" y="308" fill="#f59e0b" font-family="Inter" font-size="11" font-weight="600" text-anchor="middle">Answer + Attach MediaStream (SDK)</text>
+
+  <!-- A5: ACS → WebSocket (down curve) -->
+  <path id="a5" class="arrow" stroke="#0ea5e9" stroke-width="2.4" marker-end="url(#ah-sky)"
+        d="M 358 152 C 358 210, 300 260, 230 298"/>
+  <text id="l5" class="alabel" x="268" y="248" fill="#0ea5e9" font-family="Inter" font-size="11" font-weight="600" text-anchor="middle">WebSocket + PCM Audio</text>
+
+  <!-- A6: WebSocket → AI (horizontal right) -->
+  <path id="a6" class="arrow" stroke="#ec4899" stroke-width="2.4" marker-end="url(#ah-pink)"
+        d="M 292 348 C 400 348, 530 348, 628 348"/>
+  <text id="l6" class="alabel" x="460" y="337" fill="#ec4899" font-family="Inter" font-size="11" font-weight="600" text-anchor="middle">Raw PCM Audio → STT → LLM</text>
+
+  <!-- A7: AI → WebSocket (return, offset below) -->
+  <path id="a7" class="arrow" stroke="#6366f1" stroke-width="2.4" marker-end="url(#ah-indigo)"
+        d="M 628 372 C 530 372, 400 372, 292 372"/>
+  <text id="l7" class="alabel" x="460" y="390" fill="#6366f1" font-family="Inter" font-size="11" font-weight="600" text-anchor="middle">TTS Speech Response</text>
+
+  <!-- A8: WebSocket → ACS (audio injection - up left curve) -->
+  <path id="a8" class="arrow" stroke="#0ea5e9" stroke-width="2.4" marker-end="url(#ah-sky)"
+        d="M 188 296 C 160 260, 120 220, 120 180 C 120 152, 260 130, 318 128"/>
+  <text id="l8" class="alabel" x="115" y="240" fill="#0ea5e9" font-family="Inter" font-size="11" font-weight="600" text-anchor="middle" transform="rotate(-70,115,240)">Audio → Caller</text>
+
+  <!-- ─── GLOW RINGS (active state) ─── -->
+  <circle id="g-pstn"  class="node-glow" cx="120" cy="110" r="44" fill="#3b82f6"  filter="url(#gBlue)"  opacity="0"/>
+  <circle id="g-acs"   class="node-glow" cx="358" cy="110" r="44" fill="#f59e0b"  filter="url(#gAmber)" opacity="0"/>
+  <circle id="g-event" class="node-glow" cx="618" cy="110" r="44" fill="#9333ea"  filter="url(#gPurp)"  opacity="0"/>
+  <circle id="g-wh"    class="node-glow" cx="858" cy="110" r="44" fill="#059669"  filter="url(#gGreen)" opacity="0"/>
+  <circle id="g-ws"    class="node-glow" cx="200" cy="348" r="44" fill="#0ea5e9"  filter="url(#gSky)"   opacity="0"/>
+  <circle id="g-ai"    class="node-glow" cx="700" cy="348" r="44" fill="#ec4899"  filter="url(#gPink)"  opacity="0"/>
+
+  <!-- ─── NODE ICONS — Row 1 ─── -->
+  <!-- PSTN -->
+  <rect x="82" y="72" width="76" height="76" rx="18" fill="url(#gBlueN)"/>
+  <text x="120" y="122" font-size="34" text-anchor="middle" dominant-baseline="middle">📞</text>
+  <text x="120" y="163" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">PSTN / User</text>
+  <text x="120" y="177" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">Caller</text>
+
+  <!-- ACS -->
+  <rect x="320" y="72" width="76" height="76" rx="18" fill="url(#gAmberN)"/>
+  <text x="358" y="122" font-size="34" text-anchor="middle" dominant-baseline="middle">☁️</text>
+  <text x="358" y="163" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">Azure Comm.</text>
+  <text x="358" y="177" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">Services (ACS)</text>
+
+  <!-- Event Grid -->
+  <rect x="580" y="72" width="76" height="76" rx="18" fill="url(#gPurpN)"/>
+  <text x="618" y="122" font-size="34" text-anchor="middle" dominant-baseline="middle">⚡</text>
+  <text x="618" y="163" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">Azure</text>
+  <text x="618" y="177" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">Event Grid</text>
+
+  <!-- Webhook -->
+  <rect x="820" y="72" width="76" height="76" rx="18" fill="url(#gGreenN)"/>
+  <text x="858" y="122" font-size="34" text-anchor="middle" dominant-baseline="middle">🪝</text>
+  <text x="858" y="163" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">Custom Webhook</text>
+  <text x="858" y="177" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">Server</text>
+
+  <!-- ─── NODE ICONS — Row 2 ─── -->
+  <!-- WebSocket -->
+  <rect x="162" y="310" width="76" height="76" rx="18" fill="url(#gSkyN)"/>
+  <text x="200" y="360" font-size="34" text-anchor="middle" dominant-baseline="middle">🔌</text>
+  <text x="200" y="401" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">WebSocket</text>
+  <text x="200" y="415" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">Server</text>
+
+  <!-- AI -->
+  <rect x="662" y="310" width="76" height="76" rx="18" fill="url(#gPinkN)"/>
+  <text x="700" y="360" font-size="34" text-anchor="middle" dominant-baseline="middle">🤖</text>
+  <text x="700" y="401" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">AI / LLM</text>
+  <text x="700" y="415" font-family="Inter" font-size="11" font-weight="600" fill="#4a5e7a" text-anchor="middle">(Gemini / Claude)</text>
+
+  <!-- ─── STEP NUMBERS ON ARROWS ─── -->
+  <circle id="sn1" cx="230" cy="110" r="10" fill="#1e293b" opacity="0.6"/>
+  <text x="230" y="114" font-family="Inter" font-size="10" font-weight="700" fill="#94a3b8" text-anchor="middle">1</text>
+  <circle id="sn2" cx="488" cy="110" r="10" fill="#1e293b" opacity="0.6"/>
+  <text x="488" y="114" font-family="Inter" font-size="10" font-weight="700" fill="#94a3b8" text-anchor="middle">2</text>
+  <circle id="sn3" cx="748" cy="110" r="10" fill="#1e293b" opacity="0.6"/>
+  <text x="748" y="114" font-family="Inter" font-size="10" font-weight="700" fill="#94a3b8" text-anchor="middle">3</text>
+</svg>
+</div><!-- /svg-wrap -->
+</div><!-- /svg-col -->
+
+<!-- RIGHT: Step cards -->
+<div class="steps-col">
+<div class="step-section">
+  <div class="steps-title">▸ Data Flow Steps</div>
+  <div class="step-grid">
+    <div class="sc" id="s1"><div class="sn">1</div><div class="st"><strong>PSTN / User Dials ACS Number</strong><br>Inbound call arrives at your Azure Communication Services phone number.</div></div>
+    <div class="sc" id="s2"><div class="sn">2</div><div class="st"><strong>ACS Emits IncomingCall Event</strong><br>ACS publishes <code>Microsoft.Communication.IncomingCall</code> to Azure Event Grid.</div></div>
+    <div class="sc" id="s3"><div class="sn">3</div><div class="st"><strong>Event Grid POSTs to Custom Webhook</strong><br>HTTPS POST to your server's <code>/api/incoming-call</code>. Validate the subscription handshake.</div></div>
+    <div class="sc" id="s4"><div class="sn">4</div><div class="st"><strong>Webhook Answers + Attaches Media Stream</strong><br>Uses Call Automation SDK to answer and stream audio to your WebSocket server.</div></div>
+    <div class="sc" id="s5"><div class="sn">5</div><div class="st"><strong>ACS Opens WebSocket & Streams PCM Audio</strong><br>Real-time raw audio packets flow from ACS to your WebSocket server.</div></div>
+    <div class="sc" id="s6"><div class="sn">6</div><div class="st"><strong>Audio Forwarded to AI / LLM</strong><br>Your server pipes audio through STT → LLM pipeline (Gemini, Claude, GPT, etc.).</div></div>
+    <div class="sc" id="s7"><div class="sn">7</div><div class="st"><strong>AI Returns Synthesised Speech</strong><br>The AI processes the query and returns a TTS audio response to the WebSocket server.</div></div>
+    <div class="sc" id="s8"><div class="sn">8</div><div class="st"><strong>Audio Injected Back into Call</strong><br>Synthesised speech is streamed through ACS back to the caller. The loop repeats.</div></div>
+  </div>
+  <div class="legend">
+    <div class="li"><div class="ld" style="background:#3b82f6"></div>Call signalling</div>
+    <div class="li"><div class="ld" style="background:#9333ea"></div>Event Grid</div>
+    <div class="li"><div class="ld" style="background:#10b981"></div>Webhook HTTP</div>
+    <div class="li"><div class="ld" style="background:#f59e0b"></div>ACS SDK</div>
+    <div class="li"><div class="ld" style="background:#0ea5e9"></div>WebSocket</div>
+    <div class="li"><div class="ld" style="background:#ec4899"></div>AI pipeline</div>
+    <div class="li"><div class="ld" style="background:#6366f1"></div>TTS</div>
+  </div>
+</div><!-- /step-section -->
+</div><!-- /steps-col -->
+</div><!-- /main-layout -->
+
+<script>
+const STEPS = [
+  { arrows:['a1'], labels:['l1'], glows:['g-pstn','g-acs'],   card:'s1' },
+  { arrows:['a2'], labels:['l2'], glows:['g-event'],           card:'s2' },
+  { arrows:['a3'], labels:['l3'], glows:['g-wh'],              card:'s3' },
+  { arrows:['a4'], labels:['l4'], glows:['g-acs','g-wh'],      card:'s4' },
+  { arrows:['a5'], labels:['l5'], glows:['g-acs','g-ws'],      card:'s5' },
+  { arrows:['a6'], labels:['l6'], glows:['g-ws','g-ai'],       card:'s6' },
+  { arrows:['a7'], labels:['l7'], glows:['g-ai','g-ws'],       card:'s7' },
+  { arrows:['a8'], labels:['l8'], glows:['g-ws','g-acs'],      card:'s8' },
+];
+
+let timers = [], running = false;
+
+function cls(ids, c) {
+  ids.forEach(id => {
+    const e = document.getElementById(id);
+    if (!e) return;
+    e.classList.remove('active','done');
+    if (c) e.classList.add(c);
+  });
+}
+
+function resetAnim() {
+  timers.forEach(clearTimeout); timers = []; running = false;
+  document.querySelectorAll('.arrow,.alabel,.node-glow').forEach(e => e.classList.remove('active','done'));
+  document.querySelectorAll('.sc').forEach(e => e.classList.remove('active','done'));
+  document.getElementById('btnPlay').textContent = '▶ Play Flow';
+}
+
+function startAnim() {
+  if (running) { resetAnim(); return; }
+  resetAnim(); running = true;
+  document.getElementById('btnPlay').textContent = '⏹ Stop';
+
+  let t = 400;
+  const GAP = 1600;
+
+  STEPS.forEach((step, i) => {
+    timers.push(setTimeout(() => {
+      // done-ify previous
+      if (i > 0) {
+        const p = STEPS[i-1];
+        cls(p.arrows, 'done'); cls(p.labels, 'done'); cls(p.glows, '');
+        const pc = document.getElementById(p.card);
+        if (pc) { pc.classList.remove('active'); pc.classList.add('done'); }
+      }
+      // activate current
+      cls(step.arrows, 'active'); cls(step.labels, 'active'); cls(step.glows, 'active');
+      const sc = document.getElementById(step.card);
+      if (sc) sc.classList.add('active');
+    }, t));
+    t += GAP;
+  });
+
+  timers.push(setTimeout(() => {
+    const last = STEPS[STEPS.length-1];
+    cls(last.arrows,'done'); cls(last.labels,'done'); cls(last.glows,'');
+    const lc = document.getElementById(last.card);
+    if (lc) { lc.classList.remove('active'); lc.classList.add('done'); }
+    document.getElementById('btnPlay').textContent = '▶ Replay';
+    running = false;
+  }, t + 400));
+}
+</script>
+</body>
+</html>
