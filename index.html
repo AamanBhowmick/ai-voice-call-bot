@@ -467,7 +467,324 @@
 </div><!-- /steps-col -->
 </div><!-- /main-layout -->
 
+<!-- ── AZURE SETUP GUIDE ── -->
+<style>
+  .guide-wrap {
+    width:100%; max-width:1400px; margin-top:40px;
+  }
+  .guide-title {
+    font-size:1.25rem; font-weight:700; margin-bottom:4px;
+    background:linear-gradient(135deg,#60a5fa,#a78bfa 50%,#34d399);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  .guide-sub {
+    font-size:.75rem; color:#334155; margin-bottom:20px; letter-spacing:.4px;
+  }
+  .phase-grid { display:flex; flex-direction:column; gap:10px; }
+  .phase {
+    background:#090f1e; border:1px solid #1e2d4a; border-radius:13px;
+    overflow:hidden; transition:border-color .3s,box-shadow .3s;
+  }
+  .phase:hover { border-color:#2d4a7a; box-shadow:0 4px 24px rgba(59,130,246,.08); }
+  .phase-header {
+    display:flex; align-items:center; gap:12px;
+    padding:14px 18px; cursor:pointer; user-select:none;
+  }
+  .phase-num {
+    min-width:32px; height:32px; border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.75rem; font-weight:700; flex-shrink:0;
+  }
+  .phase-info { flex:1; }
+  .phase-name { font-size:.85rem; font-weight:700; color:#c4d4ec; }
+  .phase-desc { font-size:.72rem; color:#4a6080; margin-top:2px; }
+  .phase-arrow {
+    font-size:.8rem; color:#2d4a7a; transition:transform .3s;
+    margin-left:auto; flex-shrink:0;
+  }
+  .phase.open .phase-arrow { transform:rotate(180deg); }
+  .phase-body {
+    max-height:0; overflow:hidden;
+    transition:max-height .4s cubic-bezier(.4,0,.2,1);
+    border-top:0px solid transparent;
+  }
+  .phase.open .phase-body {
+    max-height:1200px;
+    border-top:1px solid #1a2e4a;
+  }
+  .phase-content { padding:16px 18px 18px; }
+
+  /* Steps inside each phase */
+  .pstep { display:flex; gap:10px; margin-bottom:12px; }
+  .pstep:last-child { margin-bottom:0; }
+  .pstep-num {
+    min-width:22px; height:22px; border-radius:6px;
+    background:#0d1829; border:1px solid #1e3556;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.65rem; font-weight:700; color:#3b82f6; flex-shrink:0; margin-top:1px;
+  }
+  .pstep-text { font-size:.75rem; line-height:1.6; color:#7a96bc; }
+  .pstep-text strong { color:#c4d4ec; }
+  .pstep-text code {
+    background:#0d1829; border:1px solid #1e2e4a; border-radius:4px;
+    padding:1px 6px; font-size:.68rem; color:#67e8f9; font-family:'Courier New',monospace;
+  }
+  .pstep-text a { color:#60a5fa; text-decoration:none; }
+  .pstep-text a:hover { text-decoration:underline; }
+
+  /* Section headers inside phase body */
+  .phase-section-title {
+    font-size:.62rem; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;
+    color:#1e3556; margin:16px 0 10px;
+  }
+  .phase-section-title:first-child { margin-top:0; }
+
+  /* Tip / Warning banners */
+  .ptip, .pwarn, .pnote {
+    border-radius:8px; padding:10px 14px; margin-bottom:12px;
+    font-size:.72rem; line-height:1.6; display:flex; gap:10px; align-items:flex-start;
+  }
+  .ptip  { background:#071f12; border:1px solid #0a3d22; color:#4ade80; }
+  .pwarn { background:#1c0f00; border:1px solid #3d1f00; color:#fbbf24; }
+  .pnote { background:#070f1e; border:1px solid #1e2d4a; color:#7a96bc; }
+  .ptip-icon, .pwarn-icon, .pnote-icon { font-size:.9rem; flex-shrink:0; margin-top:1px; }
+
+  /* Code block */
+  .pcode {
+    background:#050c1a; border:1px solid #1a2a44; border-radius:8px;
+    padding:14px 16px; font-family:'Courier New',monospace;
+    font-size:.7rem; line-height:1.7; color:#94a3b8; overflow-x:auto;
+    margin-bottom:12px; white-space:pre;
+  }
+  .pcode .kw  { color:#a78bfa; }
+  .pcode .str { color:#34d399; }
+  .pcode .cmt { color:#334155; }
+  .pcode .fn  { color:#60a5fa; }
+
+  /* Table */
+  .ptable { width:100%; border-collapse:collapse; margin-bottom:12px; font-size:.72rem; }
+  .ptable th { text-align:left; padding:7px 12px; background:#0a1628; color:#4a6080;
+                font-weight:700; letter-spacing:.5px; font-size:.64rem; text-transform:uppercase; border-bottom:1px solid #1a2d4a; }
+  .ptable td { padding:8px 12px; color:#7a96bc; border-bottom:1px solid #111e35; vertical-align:top; }
+  .ptable tr:last-child td { border-bottom:none; }
+  .ptable td code {
+    background:#0d1829; border:1px solid #1e2e4a; border-radius:4px;
+    padding:1px 6px; font-size:.67rem; color:#67e8f9; font-family:'Courier New',monospace;
+  }
+  .ptable td strong { color:#c4d4ec; }
+</style>
+
+<div class="guide-wrap">
+  <div class="guide-title">☁ Azure Portal Setup Guide</div>
+  <p class="guide-sub">Step-by-step provisioning for every Azure resource in the architecture above</p>
+
+  <div class="phase-grid">
+
+    <!-- PHASE 1 -->
+    <div class="phase" id="ph1">
+      <div class="phase-header" onclick="togglePhase('ph1')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#1e3a8a,#3b82f6);">1</div>
+        <div class="phase-info">
+          <div class="phase-name">Resource Group</div>
+          <div class="phase-desc">Create a logical container for all your Azure resources</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="ptip"><span class="ptip-icon">💡</span>A Resource Group is just a folder — it keeps billing, access control, and cleanup all in one place.</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">In the Azure Portal search bar, type <strong>Resource groups</strong> → click it.</div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Click <strong>+ Create</strong>.</div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Set <strong>Subscription</strong> → your subscription. Set <strong>Resource group name</strong> → e.g. <code>rg-voice-bot</code>. Set <strong>Region</strong> → closest to you (e.g. <code>East US</code>).</div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Click <strong>Review + create</strong> → <strong>Create</strong>.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="phase" id="ph2">
+      <div class="phase-header" onclick="togglePhase('ph2')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#78350f,#f59e0b);">2</div>
+        <div class="phase-info">
+          <div class="phase-name">Azure Communication Services (ACS)</div>
+          <div class="phase-desc">Provision the core telephony service + buy a phone number</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pwarn"><span class="pwarn-icon">⚠</span>ACS is the heart of the architecture — without it there is no call ingestion or event firing.</div>
+          <div class="phase-section-title">Create ACS Resource</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Search <strong>Communication Services</strong> in the portal → click <strong>+ Create</strong>.</div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Select <strong>Resource group</strong> → <code>rg-voice-bot</code>. Enter <strong>Resource name</strong> → e.g. <code>acs-voice-bot</code>. Set <strong>Data location</strong> → <code>United States</code>.</div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Click <strong>Review + create</strong> → <strong>Create</strong>. Once deployed, open the resource, go to <strong>Keys</strong> (left sidebar) and copy your <strong>Connection string</strong>.</div></div>
+          <div class="phase-section-title">Buy a Phone Number</div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Inside your ACS resource → click <strong>Phone numbers</strong> in the sidebar → <strong>+ Get</strong> → <strong>Get a number</strong>.</div></div>
+          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Select <strong>Country</strong>, <strong>Number type</strong> → <code>Toll-free</code> or <code>Geographic</code>, <strong>Features</strong> → check <code>Voice calls</code>.</div></div>
+          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Click <strong>Search</strong> → choose a number → <strong>Buy</strong>. Note this number down — callers will dial it.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div class="phase" id="ph3">
+      <div class="phase-header" onclick="togglePhase('ph3')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#064e3b,#059669);">3</div>
+        <div class="phase-info">
+          <div class="phase-name">Deploy Your Webhook Server</div>
+          <div class="phase-desc">Host your custom backend on Azure App Service</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="phase-section-title">Create App Service</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Search <strong>App Services</strong> → click <strong>+ Create</strong> → <strong>Web App</strong>.</div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Set <strong>Resource group</strong> → <code>rg-voice-bot</code>. Set <strong>Name</strong> → e.g. <code>webhook-voice-bot</code> (becomes <code>webhook-voice-bot.azurewebsites.net</code>).</div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Set <strong>Runtime stack</strong> → <code>Node.js 20 LTS</code> (or Python/Java). Set <strong>Region</strong> → same as ACS. Set <strong>Pricing plan</strong> → <code>B1 Basic</code> (needed for WebSockets).</div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Click <strong>Review + create</strong> → <strong>Create</strong>.</div></div>
+          <div class="phase-section-title">Enable WebSockets</div>
+          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Open the App Service → <strong>Configuration</strong> → <strong>General settings</strong> → toggle <strong>Web sockets</strong> to <strong>On</strong> → <strong>Save</strong>.</div></div>
+          <div class="phase-section-title">Deploy Your Code</div>
+          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Go to <strong>Deployment Center</strong> → choose <strong>GitHub</strong> (recommended) or <strong>ZIP deploy</strong>. For ZIP deploy: zip your project folder → drag-and-drop it in the portal Kudu console (<code>yourapp.scm.azurewebsites.net</code>).</div></div>
+          <div class="ptip"><span class="ptip-icon">💡</span>Note your App Service URL: <code>https://webhook-voice-bot.azurewebsites.net</code> — you'll need it in the next phase.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 4 -->
+    <div class="phase" id="ph4">
+      <div class="phase-header" onclick="togglePhase('ph4')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#581c87,#9333ea);">4</div>
+        <div class="phase-info">
+          <div class="phase-name">Event Grid Subscription</div>
+          <div class="phase-desc">Wire ACS → Event Grid → your webhook endpoint</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pwarn"><span class="pwarn-icon">⚠</span>This is the critical wiring step. Without it your server never gets notified of incoming calls.</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Open your <strong>ACS resource</strong> → click <strong>Events</strong> in the left sidebar.</div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Click <strong>+ Event Subscription</strong>.</div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Set <strong>Name</strong> → <code>incoming-call-subscription</code>. Set <strong>Event Schema</strong> → <code>Cloud Event Schema v1.0</code>.</div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Under <strong>Filter to Event Types</strong> → uncheck all → check only <strong>Incoming Call</strong> (<code>Microsoft.Communication.IncomingCall</code>).</div></div>
+          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Set <strong>Endpoint Type</strong> → <code>Web Hook</code>. Set <strong>Endpoint</strong> → <code>https://webhook-voice-bot.azurewebsites.net/api/incoming-call</code>.</div></div>
+          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Click <strong>Create</strong>. Event Grid immediately sends a <code>SubscriptionValidationEvent</code> POST — your server must respond with <code>{ "validationResponse": "&lt;validationCode&gt;" }</code> within 30 seconds.</div></div>
+          <div class="pnote"><span class="pnote-icon">ℹ</span>Check <strong>App Service → Log stream</strong> to confirm the validation request arrived and your server responded correctly.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 5 -->
+    <div class="phase" id="ph5">
+      <div class="phase-header" onclick="togglePhase('ph5')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#0c4a6e,#0ea5e9);">5</div>
+        <div class="phase-info">
+          <div class="phase-name">App Settings &amp; Environment Variables</div>
+          <div class="phase-desc">Configure your server with ACS credentials and URLs</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Open your <strong>App Service</strong> → <strong>Configuration</strong> → <strong>Application settings</strong> → click <strong>+ New application setting</strong> for each row below.</div></div>
+          <table class="ptable">
+            <tr><th>Setting Name</th><th>Value</th></tr>
+            <tr><td><code>ACS_CONNECTION_STRING</code></td><td>Connection string from Phase 2</td></tr>
+            <tr><td><code>ACS_PHONE_NUMBER</code></td><td>Your ACS number e.g. <code>+12025550123</code></td></tr>
+            <tr><td><code>CALLBACK_URI</code></td><td><code>https://webhook-voice-bot.azurewebsites.net/api/callback</code></td></tr>
+            <tr><td><code>WEBSOCKET_URL</code></td><td><code>wss://webhook-voice-bot.azurewebsites.net/audio</code></td></tr>
+          </table>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Click <strong>Save</strong> → <strong>Continue</strong>. Your app restarts automatically with the new settings.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 6 -->
+    <div class="phase" id="ph6">
+      <div class="phase-header" onclick="togglePhase('ph6')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#701a75,#ec4899);">6</div>
+        <div class="phase-info">
+          <div class="phase-name">Call Automation SDK — Answer &amp; Stream</div>
+          <div class="phase-desc">Core code pattern to answer calls and attach the media stream</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Install the SDK: <code>npm install @azure/communication-call-automation</code></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Add this handler to your Express/Node server:</div></div>
+          <div class="pcode"><span class="kw">const</span> { CallAutomationClient } = <span class="fn">require</span>(<span class="str">'@azure/communication-call-automation'</span>);
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="fn">CallAutomationClient</span>(process.env.ACS_CONNECTION_STRING);
+
+app.<span class="fn">post</span>(<span class="str">'/api/incoming-call'</span>, <span class="kw">async</span> (req, res) => {
+  <span class="kw">const</span> event = req.body[0];
+
+  <span class="cmt">// ① Subscription validation handshake</span>
+  <span class="kw">if</span> (event.eventType === <span class="str">'Microsoft.EventGrid.SubscriptionValidationEvent'</span>) {
+    <span class="kw">return</span> res.<span class="fn">json</span>({ validationResponse: event.data.validationCode });
+  }
+
+  <span class="cmt">// ② Answer call + attach WebSocket media stream</span>
+  <span class="kw">await</span> client.<span class="fn">answerCall</span>(
+    event.data.incomingCallContext,
+    process.env.CALLBACK_URI,
+    {
+      mediaStreamingOptions: {
+        transportUrl:     process.env.WEBSOCKET_URL,
+        transportType:    <span class="str">'websocket'</span>,
+        contentType:      <span class="str">'audio'</span>,
+        audioChannelType: <span class="str">'unmixed'</span>,
+      }
+    }
+  );
+  res.<span class="fn">sendStatus</span>(200);
+});</div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Your <code>/audio</code> WebSocket endpoint receives binary PCM frames. Pipe them to your STT → LLM → TTS pipeline and send synthesised audio frames back over the same socket.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 7 -->
+    <div class="phase" id="ph7">
+      <div class="phase-header" onclick="togglePhase('ph7')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#1e3a8a,#6366f1);">7</div>
+        <div class="phase-info">
+          <div class="phase-name">Test &amp; Debug</div>
+          <div class="phase-desc">Verify the full call flow and where to look when things go wrong</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="phase-section-title">Testing</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Call your ACS phone number from any phone.</div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">In the portal, open <strong>App Service → Log stream</strong> — you should see the <code>IncomingCall</code> event POST arrive.</div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Your server answers → WebSocket opens → audio flows → AI responds → caller hears reply.</div></div>
+          <div class="phase-section-title">Where to look when things break</div>
+          <table class="ptable">
+            <tr><th>Problem</th><th>Where to check</th></tr>
+            <tr><td>Event never arrives at webhook</td><td>ACS resource → <strong>Events</strong> → your subscription → <strong>Metrics</strong> tab</td></tr>
+            <tr><td>Webhook validation failing</td><td>App Service → <strong>Log stream</strong></td></tr>
+            <tr><td>App crashes / 500 errors</td><td>App Service → <strong>Diagnose and solve problems</strong></td></tr>
+            <tr><td>Call not connecting</td><td>ACS resource → <strong>Diagnostics settings</strong> → enable Log Analytics</td></tr>
+            <tr><td>WebSocket not opening</td><td>Check <strong>Web sockets</strong> is enabled (Phase 3, Step 5)</td></tr>
+          </table>
+          <div class="ptip"><span class="ptip-icon">💡</span><strong>Cost estimate for testing:</strong> ACS free. Phone number ≈ $1/mo. Inbound calls ≈ $0.004/min. App Service B1 ≈ $13/mo. Total for light testing: under $15/month.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /phase-grid -->
+</div><!-- /guide-wrap -->
+
 <script>
+function togglePhase(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
 const STEPS = [
   { arrows:['a1'], labels:['l1'], glows:['g-pstn','g-acs'],   card:'s1' },
   { arrows:['a2'], labels:['l2'], glows:['g-event'],           card:'s2' },
@@ -507,14 +824,12 @@ function startAnim() {
 
   STEPS.forEach((step, i) => {
     timers.push(setTimeout(() => {
-      // done-ify previous
       if (i > 0) {
         const p = STEPS[i-1];
         cls(p.arrows, 'done'); cls(p.labels, 'done'); cls(p.glows, '');
         const pc = document.getElementById(p.card);
         if (pc) { pc.classList.remove('active'); pc.classList.add('done'); }
       }
-      // activate current
       cls(step.arrows, 'active'); cls(step.labels, 'active'); cls(step.glows, 'active');
       const sc = document.getElementById(step.card);
       if (sc) sc.classList.add('active');
@@ -531,6 +846,7 @@ function startAnim() {
     running = false;
   }, t + 400));
 }
+
 function toggleDetail(panelId, btn) {
   const panel = document.getElementById(panelId);
   const isOpen = panel.classList.toggle('open');
