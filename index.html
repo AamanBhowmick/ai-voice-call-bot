@@ -592,11 +592,11 @@
       </div>
       <div class="phase-body">
         <div class="phase-content">
-          <div class="ptip"><span class="ptip-icon">💡</span>A Resource Group is just a folder — it keeps billing, access control, and cleanup all in one place.</div>
-          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">In the Azure Portal search bar, type <strong>Resource groups</strong> → click it.</div></div>
-          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Click <strong>+ Create</strong>.</div></div>
-          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Set <strong>Subscription</strong> → your subscription. Set <strong>Resource group name</strong> → e.g. <code>rg-voice-bot</code>. Set <strong>Region</strong> → closest to you (e.g. <code>East US</code>).</div></div>
-          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Click <strong>Review + create</strong> → <strong>Create</strong>.</div></div>
+          <div class="ptip"><span class="ptip-icon">💡</span><strong>What is a Resource Group?</strong> Think of it as a project folder on Azure. Every Azure resource you create (ACS, App Service, etc.) lives inside it. When you're done, you can delete the whole group in one click and stop all billing instantly.</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Go to <a href="https://portal.azure.com" target="_blank">portal.azure.com</a>. In the <strong>top search bar</strong>, type <strong>Resource groups</strong> and click it.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> This is your starting point. All other services will be placed here.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Click <strong>+ Create</strong> in the top-left.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> You can't add anything to a group that doesn't exist yet — this creates the container.</span></div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Set <strong>Subscription</strong> → your Azure subscription. Set <strong>Resource group name</strong> → e.g. <code>rg-voice-bot</code>. Set <strong>Region</strong> → the data center closest to you, e.g. <code>East US</code>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why the name matters:</em> Use a clear name like <code>rg-voice-bot</code> so you immediately know what project it belongs to. Region affects latency — pick what's geographically closest to your users.</span></div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Click <strong>Review + create</strong> → then <strong>Create</strong>. Wait a few seconds for Azure to confirm it's ready.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> Azure validates your inputs before provisioning. Once created you'll see it in your portal dashboard.</span></div></div>
         </div>
       </div>
     </div>
@@ -613,15 +613,15 @@
       </div>
       <div class="phase-body">
         <div class="phase-content">
-          <div class="pwarn"><span class="pwarn-icon">⚠</span>ACS is the heart of the architecture — without it there is no call ingestion or event firing.</div>
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>What is ACS?</strong> Azure Communication Services is Microsoft's cloud telephony platform. It receives incoming phone calls, converts them into digital events, and lets your backend code control what happens next — all without managing physical phone infrastructure.</div>
           <div class="phase-section-title">Create ACS Resource</div>
-          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Search <strong>Communication Services</strong> in the portal → click <strong>+ Create</strong>.</div></div>
-          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Select <strong>Resource group</strong> → <code>rg-voice-bot</code>. Enter <strong>Resource name</strong> → e.g. <code>acs-voice-bot</code>. Set <strong>Data location</strong> → <code>United States</code>.</div></div>
-          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Click <strong>Review + create</strong> → <strong>Create</strong>. Once deployed, open the resource, go to <strong>Keys</strong> (left sidebar) and copy your <strong>Connection string</strong>.</div></div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">In the portal search bar, type <strong>Communication Services</strong> → click it → click <strong>+ Create</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> This provisions your telephony engine on Azure. Without it you cannot receive or manage phone calls programmatically.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Select <strong>Resource group</strong> → <code>rg-voice-bot</code>. Enter <strong>Resource name</strong> → e.g. <code>acs-voice-bot</code>. Set <strong>Data location</strong> → <code>United States</code> (or your region).<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why the data location matters:</em> This is where ACS physically stores call metadata and recordings. Pick the region closest to your users for lowest latency and to satisfy data residency rules.</span></div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Click <strong>Review + create</strong> → <strong>Create</strong>. Once deployed, open the resource → click <strong>Keys</strong> in the left sidebar → copy the <strong>Connection string</strong> and save it somewhere safe.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why the connection string:</em> This is the password your code uses to authenticate with ACS and make SDK calls (e.g. answer a call, stream audio). Never share it publicly.</span></div></div>
           <div class="phase-section-title">Buy a Phone Number</div>
-          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Inside your ACS resource → click <strong>Phone numbers</strong> in the sidebar → <strong>+ Get</strong> → <strong>Get a number</strong>.</div></div>
-          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Select <strong>Country</strong>, <strong>Number type</strong> → <code>Toll-free</code> or <code>Geographic</code>, <strong>Features</strong> → check <code>Voice calls</code>.</div></div>
-          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Click <strong>Search</strong> → choose a number → <strong>Buy</strong>. Note this number down — callers will dial it.</div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Inside your ACS resource → click <strong>Phone numbers</strong> in the left sidebar → <strong>+ Get</strong> → <strong>Get a number</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> This is the actual dialable phone number your users will call. ACS routes calls to this number into your system.</span></div></div>
+          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Select your <strong>Country</strong>. Set <strong>Number type</strong> → <code>Toll-free</code> (free for callers, you pay per minute) or <code>Geographic</code> (local area number). Under <strong>Features</strong> → make sure <code>Voice calls</code> is checked.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why Voice calls must be checked:</em> ACS numbers can be configured for SMS only, voice only, or both. Our bot needs voice — checking this enables the call-receive capability.</span></div></div>
+          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Click <strong>Search</strong> → pick any available number → click <strong>Buy</strong>. Write this number down (e.g. <code>+12025550123</code>) — this is what callers will dial.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Cost note:</em> Phone numbers cost roughly $1–2/month to lease. Inbound calls cost ~$0.004/min on top of that.</span></div></div>
         </div>
       </div>
     </div>
@@ -638,16 +638,17 @@
       </div>
       <div class="phase-body">
         <div class="phase-content">
+          <div class="pnote"><span class="pnote-icon">ℹ</span><strong>What is App Service?</strong> It's Azure's managed hosting platform for web apps. You upload your Node.js/Python/Java code and Azure keeps it running 24/7 with a public HTTPS URL — no server management needed. This is where your webhook and WebSocket server will live.</div>
           <div class="phase-section-title">Create App Service</div>
-          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Search <strong>App Services</strong> → click <strong>+ Create</strong> → <strong>Web App</strong>.</div></div>
-          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Set <strong>Resource group</strong> → <code>rg-voice-bot</code>. Set <strong>Name</strong> → e.g. <code>webhook-voice-bot</code> (becomes <code>webhook-voice-bot.azurewebsites.net</code>).</div></div>
-          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Set <strong>Runtime stack</strong> → <code>Node.js 20 LTS</code> (or Python/Java). Set <strong>Region</strong> → same as ACS. Set <strong>Pricing plan</strong> → <code>B1 Basic</code> (needed for WebSockets).</div></div>
-          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Click <strong>Review + create</strong> → <strong>Create</strong>.</div></div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">In the search bar type <strong>App Services</strong> → click it → <strong>+ Create</strong> → <strong>Web App</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why Web App and not something else:</em> Web App is the simplest option for hosting an HTTP server. Other options (Container Apps, Functions) add complexity you don't need yet.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Set <strong>Resource group</strong> → <code>rg-voice-bot</code>. Set <strong>Name</strong> → e.g. <code>webhook-voice-bot</code>. Azure turns this into your public URL: <code>webhook-voice-bot.azurewebsites.net</code>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why this URL matters:</em> This is the HTTPS address you'll give to Event Grid so it knows where to send incoming call notifications.</span></div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Set <strong>Runtime stack</strong> → <code>Node.js 20 LTS</code> (match your code language). Set <strong>Region</strong> → <em>same region as your ACS resource</em>. Set <strong>Pricing plan</strong> → <code>B1 Basic</code>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why B1 and not Free (F1):</em> The free tier does NOT support WebSockets, which our audio streaming requires. B1 Basic (~$13/month) is the minimum plan that enables WebSocket connections.</span></div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Click <strong>Review + create</strong> → <strong>Create</strong>. Deployment takes 1–2 minutes.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why wait:</em> Azure is allocating compute resources and setting up the HTTPS certificate for your domain.</span></div></div>
           <div class="phase-section-title">Enable WebSockets</div>
-          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Open the App Service → <strong>Configuration</strong> → <strong>General settings</strong> → toggle <strong>Web sockets</strong> to <strong>On</strong> → <strong>Save</strong>.</div></div>
+          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Open your new App Service → left sidebar → <strong>Configuration</strong> → <strong>General settings</strong> tab → find <strong>Web sockets</strong> → switch it <strong>On</strong> → click <strong>Save</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why this step exists:</em> WebSocket support is disabled by default even on B1. ACS streams audio to your server over a persistent WebSocket connection — if this toggle is Off, ACS cannot connect and your bot will never receive audio.</span></div></div>
           <div class="phase-section-title">Deploy Your Code</div>
-          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Go to <strong>Deployment Center</strong> → choose <strong>GitHub</strong> (recommended) or <strong>ZIP deploy</strong>. For ZIP deploy: zip your project folder → drag-and-drop it in the portal Kudu console (<code>yourapp.scm.azurewebsites.net</code>).</div></div>
-          <div class="ptip"><span class="ptip-icon">💡</span>Note your App Service URL: <code>https://webhook-voice-bot.azurewebsites.net</code> — you'll need it in the next phase.</div>
+          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Left sidebar → <strong>Deployment Center</strong> → choose <strong>GitHub</strong> (connects directly to your repo, auto-deploys on every push) or <strong>ZIP deploy</strong> (manual: zip your project folder and upload it).<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why GitHub is recommended:</em> Every time you push a fix to GitHub, Azure automatically pulls the new code and restarts your app — no manual re-upload needed. Great for iterating quickly.</span></div></div>
+          <div class="ptip"><span class="ptip-icon">💡</span>Copy your App Service URL now: <code>https://webhook-voice-bot.azurewebsites.net</code>. You will paste it into Event Grid in the very next phase.</div>
         </div>
       </div>
     </div>
@@ -664,14 +665,14 @@
       </div>
       <div class="phase-body">
         <div class="phase-content">
-          <div class="pwarn"><span class="pwarn-icon">⚠</span>This is the critical wiring step. Without it your server never gets notified of incoming calls.</div>
-          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Open your <strong>ACS resource</strong> → click <strong>Events</strong> in the left sidebar.</div></div>
-          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Click <strong>+ Event Subscription</strong>.</div></div>
-          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Set <strong>Name</strong> → <code>incoming-call-subscription</code>. Set <strong>Event Schema</strong> → <code>Cloud Event Schema v1.0</code>.</div></div>
-          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Under <strong>Filter to Event Types</strong> → uncheck all → check only <strong>Incoming Call</strong> (<code>Microsoft.Communication.IncomingCall</code>).</div></div>
-          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Set <strong>Endpoint Type</strong> → <code>Web Hook</code>. Set <strong>Endpoint</strong> → <code>https://webhook-voice-bot.azurewebsites.net/api/incoming-call</code>.</div></div>
-          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Click <strong>Create</strong>. Event Grid immediately sends a <code>SubscriptionValidationEvent</code> POST — your server must respond with <code>{ "validationResponse": "&lt;validationCode&gt;" }</code> within 30 seconds.</div></div>
-          <div class="pnote"><span class="pnote-icon">ℹ</span>Check <strong>App Service → Log stream</strong> to confirm the validation request arrived and your server responded correctly.</div>
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>What is Event Grid?</strong> It's Azure's notification router. When ACS receives a call, it publishes an event. Event Grid immediately forwards that event to your webhook URL — like a smart doorbell that rings your phone when a visitor arrives. Without this step your server is deaf to incoming calls.</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Open your <strong>ACS resource</strong> (<code>acs-voice-bot</code>) → in the left sidebar click <strong>Events</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why here:</em> The Events section is where ACS exposes its built-in Event Grid integration. This is the correct place to subscribe to call events.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Click <strong>+ Event Subscription</strong> at the top.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> A subscription tells Event Grid "for this specific event type, deliver it to this specific URL". One ACS resource can have multiple subscriptions forwarding to different destinations.</span></div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Set <strong>Name</strong> → <code>incoming-call-subscription</code>. Set <strong>Event Schema</strong> → <code>Cloud Event Schema v1.0</code>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why CloudEvent Schema:</em> It's the modern, standardised event format. The ACS SDK and most tools expect this format — using the older Event Grid Schema may cause parsing errors in your code.</span></div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Under <strong>Filter to Event Types</strong> → uncheck all checkboxes → then check only <strong>Incoming Call</strong> (<code>Microsoft.Communication.IncomingCall</code>).<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why filter:</em> ACS fires many event types (call ended, participant added, etc.). You only care about new incoming calls — filtering prevents your webhook from being flooded with unrelated events.</span></div></div>
+          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Set <strong>Endpoint Type</strong> → <code>Web Hook</code>. In the <strong>Endpoint</strong> field paste: <code>https://webhook-voice-bot.azurewebsites.net/api/incoming-call</code>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why this specific path:</em> This is the route your Express server exposes to receive call events. The path <code>/api/incoming-call</code> is just a convention — you can name it anything as long as your code listens on that same path.</span></div></div>
+          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Click <strong>Create</strong>. Event Grid <em>immediately</em> sends a one-time <code>SubscriptionValidationEvent</code> POST to your endpoint. Your server must echo back the <code>validationCode</code> within 30 seconds or the subscription will fail.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why the validation handshake:</em> This is a security measure. Azure needs to confirm you actually own and control that URL before it starts sending real call events to it — otherwise anyone could redirect your events to a malicious server.</span></div></div>
+          <div class="pnote"><span class="pnote-icon">ℹ</span>Open <strong>App Service → Log stream</strong> in a second browser tab before clicking Create so you can watch the validation request arrive in real time.</div>
         </div>
       </div>
     </div>
@@ -688,15 +689,16 @@
       </div>
       <div class="phase-body">
         <div class="phase-content">
-          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Open your <strong>App Service</strong> → <strong>Configuration</strong> → <strong>Application settings</strong> → click <strong>+ New application setting</strong> for each row below.</div></div>
+          <div class="pnote"><span class="pnote-icon">ℹ</span><strong>What are Application Settings?</strong> They are environment variables — key/value pairs your running code can read at runtime via <code>process.env.KEY_NAME</code>. Storing credentials here (instead of hardcoding them in your source code) keeps secrets out of GitHub and lets you change them without redeploying code.</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Open your <strong>App Service</strong> → left sidebar → <strong>Configuration</strong> → <strong>Application settings</strong> tab → click <strong>+ New application setting</strong> and add each row from the table below.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why here and not in your code file:</em> If you hardcode secrets in code and push to GitHub, anyone who sees your repo can access your Azure account. Environment variables stay server-side and are never exposed in code.</span></div></div>
           <table class="ptable">
-            <tr><th>Setting Name</th><th>Value</th></tr>
-            <tr><td><code>ACS_CONNECTION_STRING</code></td><td>Connection string from Phase 2</td></tr>
-            <tr><td><code>ACS_PHONE_NUMBER</code></td><td>Your ACS number e.g. <code>+12025550123</code></td></tr>
-            <tr><td><code>CALLBACK_URI</code></td><td><code>https://webhook-voice-bot.azurewebsites.net/api/callback</code></td></tr>
-            <tr><td><code>WEBSOCKET_URL</code></td><td><code>wss://webhook-voice-bot.azurewebsites.net/audio</code></td></tr>
+            <tr><th>Setting Name</th><th>Value</th><th style="color:#3a5270;font-size:.64rem">Why it's needed</th></tr>
+            <tr><td><code>ACS_CONNECTION_STRING</code></td><td>Connection string from Phase 2</td><td style="color:#3a5270;font-size:.68rem">Authenticates your code with ACS so it can answer calls and control call sessions via the SDK.</td></tr>
+            <tr><td><code>ACS_PHONE_NUMBER</code></td><td>Your ACS number e.g. <code>+12025550123</code></td><td style="color:#3a5270;font-size:.68rem">Some SDK operations need to know which phone number your bot is operating on (e.g. for outbound calls).</td></tr>
+            <tr><td><code>CALLBACK_URI</code></td><td><code>https://webhook-voice-bot.azurewebsites.net/api/callback</code></td><td style="color:#3a5270;font-size:.68rem">After answering a call, ACS sends call-state events (call connected, call ended) to this URL so your server knows what's happening in the call.</td></tr>
+            <tr><td><code>WEBSOCKET_URL</code></td><td><code>wss://webhook-voice-bot.azurewebsites.net/audio</code></td><td style="color:#3a5270;font-size:.68rem">Tells ACS where to open the WebSocket connection to stream live audio. <code>wss://</code> means secure WebSocket — always use this in production.</td></tr>
           </table>
-          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Click <strong>Save</strong> → <strong>Continue</strong>. Your app restarts automatically with the new settings.</div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Click <strong>Save</strong> at the top → then <strong>Continue</strong> in the confirmation dialog. Your app will automatically restart and pick up the new values.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why the restart:</em> Environment variables are only read when the app process starts. A restart forces your app to reload them. No code change or redeployment is needed.</span></div></div>
         </div>
       </div>
     </div>
@@ -713,8 +715,9 @@
       </div>
       <div class="phase-body">
         <div class="phase-content">
-          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Install the SDK: <code>npm install @azure/communication-call-automation</code></div></div>
-          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Add this handler to your Express/Node server:</div></div>
+          <div class="pnote"><span class="pnote-icon">ℹ</span><strong>What does the SDK do?</strong> The ACS Call Automation SDK is a library that wraps all the complex ACS REST API calls into simple JavaScript functions. Instead of manually crafting HTTP requests to answer a call, you just call <code>client.answerCall()</code> and the SDK handles the rest.</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">In your project folder run: <code>npm install @azure/communication-call-automation</code><br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> This downloads the official Microsoft SDK package into your project. Without it you'd have to manually write hundreds of lines of HTTP request code to talk to ACS.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Add this route to your Express server. Read the inline comments to understand what each part does:</div></div>
           <div class="pcode"><span class="kw">const</span> { CallAutomationClient } = <span class="fn">require</span>(<span class="str">'@azure/communication-call-automation'</span>);
 <span class="kw">const</span> client = <span class="kw">new</span> <span class="fn">CallAutomationClient</span>(process.env.ACS_CONNECTION_STRING);
 
@@ -741,7 +744,7 @@ app.<span class="fn">post</span>(<span class="str">'/api/incoming-call'</span>, 
   );
   res.<span class="fn">sendStatus</span>(200);
 });</div>
-          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Your <code>/audio</code> WebSocket endpoint receives binary PCM frames. Pipe them to your STT → LLM → TTS pipeline and send synthesised audio frames back over the same socket.</div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Your <code>/audio</code> WebSocket route receives raw binary audio frames (PCM format) from ACS in real time. Your code should pipe these to a Speech-to-Text service, get a transcript, send it to your LLM, get a response, convert it to audio via TTS, then send the audio bytes back over the same WebSocket socket.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why PCM and not MP3/WAV:</em> PCM is raw, uncompressed audio — no encoding overhead, minimal CPU on both ends. It's the lowest-latency format for real-time streaming. ACS streams it in 20ms chunks.</span></div></div>
         </div>
       </div>
     </div>
@@ -758,20 +761,20 @@ app.<span class="fn">post</span>(<span class="str">'/api/incoming-call'</span>, 
       </div>
       <div class="phase-body">
         <div class="phase-content">
-          <div class="phase-section-title">Testing</div>
-          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Call your ACS phone number from any phone.</div></div>
-          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">In the portal, open <strong>App Service → Log stream</strong> — you should see the <code>IncomingCall</code> event POST arrive.</div></div>
-          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Your server answers → WebSocket opens → audio flows → AI responds → caller hears reply.</div></div>
-          <div class="phase-section-title">Where to look when things break</div>
+          <div class="phase-section-title">Testing the Full Flow</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Call your ACS phone number from any phone (use a mobile or landline).<br><span style="color:#4a6080;font-size:.68rem">↳ <em>What to expect:</em> The call rings for a moment, then your bot should pick up. If it rings out to voicemail, your server didn't answer — check Step 2.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">In the Azure Portal, open <strong>App Service → Log stream</strong> (left sidebar). You should see an HTTP POST arrive at <code>/api/incoming-call</code> with the call event payload.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why Log stream:</em> It's a live terminal feed of everything your running app prints. If the event arrives but your server crashes, you'll see the error in real time here.</span></div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">If all goes well: your server answers → ACS opens the WebSocket → raw audio starts streaming → your STT transcribes it → LLM responds → TTS converts it to speech → caller hears the AI reply.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Latency tip:</em> First response may take 1–3 seconds (STT + LLM + TTS chain). This is normal. Use streaming TTS to start playing audio before the whole response is generated.</span></div></div>
+          <div class="phase-section-title">Troubleshooting — Where to Look</div>
           <table class="ptable">
-            <tr><th>Problem</th><th>Where to check</th></tr>
-            <tr><td>Event never arrives at webhook</td><td>ACS resource → <strong>Events</strong> → your subscription → <strong>Metrics</strong> tab</td></tr>
-            <tr><td>Webhook validation failing</td><td>App Service → <strong>Log stream</strong></td></tr>
-            <tr><td>App crashes / 500 errors</td><td>App Service → <strong>Diagnose and solve problems</strong></td></tr>
-            <tr><td>Call not connecting</td><td>ACS resource → <strong>Diagnostics settings</strong> → enable Log Analytics</td></tr>
-            <tr><td>WebSocket not opening</td><td>Check <strong>Web sockets</strong> is enabled (Phase 3, Step 5)</td></tr>
+            <tr><th>Problem you see</th><th>Where to look</th><th style="color:#3a5270;font-size:.64rem">What it tells you</th></tr>
+            <tr><td>Call rings out, bot never answers</td><td>ACS resource → <strong>Events</strong> → your subscription → <strong>Metrics</strong></td><td style="color:#3a5270;font-size:.68rem">Check "Undelivered" count — if > 0, Event Grid couldn't reach your webhook URL.</td></tr>
+            <tr><td>Subscription creation fails</td><td>App Service → <strong>Log stream</strong></td><td style="color:#3a5270;font-size:.68rem">Your server didn't respond to the validation handshake in time. Check your <code>/api/incoming-call</code> route handles the <code>SubscriptionValidationEvent</code>.</td></tr>
+            <tr><td>App crashes (500 error)</td><td>App Service → <strong>Diagnose and solve problems</strong></td><td style="color:#3a5270;font-size:.68rem">Shows crash logs with line numbers. Usually a missing env variable or a syntax error in your code.</td></tr>
+            <tr><td>Audio not streaming to AI</td><td>App Service → <strong>Log stream</strong></td><td style="color:#3a5270;font-size:.68rem">Look for WebSocket connection errors. Most common cause: Web sockets toggle is Off (Phase 3, Step 5).</td></tr>
+            <tr><td>No audio heard by caller</td><td>Check TTS output format</td><td style="color:#3a5270;font-size:.68rem">ACS expects PCM 16kHz 16-bit mono audio sent back over the WebSocket. Sending MP3 or wrong sample rate = silence.</td></tr>
           </table>
-          <div class="ptip"><span class="ptip-icon">💡</span><strong>Cost estimate for testing:</strong> ACS free. Phone number ≈ $1/mo. Inbound calls ≈ $0.004/min. App Service B1 ≈ $13/mo. Total for light testing: under $15/month.</div>
+          <div class="ptip"><span class="ptip-icon">💡</span><strong>Cost estimate for testing:</strong> ACS resource creation is free. Phone number ≈ $1–2/month. Inbound calls ≈ $0.004/min. App Service B1 ≈ $13/month. STT/LLM/TTS costs depend on usage. Total for light testing: <strong>under $20/month</strong>.</div>
         </div>
       </div>
     </div>
