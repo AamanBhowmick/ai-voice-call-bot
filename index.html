@@ -84,25 +84,74 @@
       display:flex; flex-direction:column; gap:7px;
     }
     .sc {
-      display:flex; align-items:flex-start; gap:10px;
+      display:flex; flex-direction:column; gap:8px;
       padding:11px 14px; border-radius:11px;
-      background:#090f1e; border:1px solid #161f38;
-      opacity:.3; transition:opacity .4s,border-color .4s,background .4s,box-shadow .4s;
+      background:#090f1e; border:1px solid #1e2d4a;
+      transition:border-color .4s,background .4s,box-shadow .4s;
     }
-    .sc.active { opacity:1; border-color:#3b82f6; background:#0b1630; box-shadow:0 4px 20px rgba(59,130,246,.12); }
-    .sc.done   { opacity:.65; border-color:#10b981; background:#071811; }
+    .sc.active { border-color:#3b82f6; background:#0b1630; box-shadow:0 4px 20px rgba(59,130,246,.12); }
+    .sc.done   { border-color:#10b981; background:#071811; }
     .sn {
       min-width:26px; height:26px; border-radius:7px; background:#121d33;
       display:flex; align-items:center; justify-content:center;
-      font-size:.7rem; font-weight:700; color:#2d3f5e; flex-shrink:0;
+      font-size:.7rem; font-weight:700; color:#64748b; flex-shrink:0;
       transition:background .3s,color .3s;
     }
     .sc.active .sn { background:#3b82f6; color:#fff; }
     .sc.done   .sn { background:#10b981; color:#fff; }
-    .st { font-size:.75rem; line-height:1.5; color:#4a5e7a; padding-top:3px; }
-    .st strong { color:#7a96bc; font-weight:600; }
-    .sc.active .st { color:#7a96bc; }
+    .st { font-size:.75rem; line-height:1.5; color:#7a96bc; padding-top:3px; }
+    .st strong { color:#c4d4ec; font-weight:600; }
+    .sc.active .st { color:#93b4d8; }
     .sc.active .st strong { color:#e2e8f0; }
+
+    /* ── Step detail toggle ── */
+    .sc-header { display:flex; align-items:flex-start; gap:10px; width:100%; }
+    .toggle-btn {
+      margin-left:auto; flex-shrink:0;
+      background:transparent; border:1px solid #1e3050; border-radius:6px;
+      color:#2d4870; font-size:.65rem; font-weight:700; letter-spacing:.5px;
+      padding:3px 8px; cursor:pointer; font-family:'Inter',sans-serif;
+      transition:all .2s; white-space:nowrap;
+    }
+    .toggle-btn:hover { border-color:#3b82f6; color:#60a5fa; }
+    .sc.active .toggle-btn { border-color:#3b82f666; color:#60a5fa; }
+    .sc.done   .toggle-btn { border-color:#10b98166; color:#34d398; }
+    .toggle-btn.open { background:#0d1e3a; border-color:#3b82f6; color:#93c5fd; }
+
+    /* Detail panel */
+    .detail-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .38s cubic-bezier(.4,0,.2,1), opacity .3s;
+      opacity: 0;
+      border-top: 0px solid transparent;
+    }
+    .detail-panel.open {
+      max-height: 400px;
+      opacity: 1;
+      border-top: 1px solid #192845;
+      margin-top: 10px;
+      padding-top: 10px;
+    }
+    .detail-list {
+      list-style: none; padding:0; margin:0;
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .detail-list li {
+      display:flex; gap:8px; align-items:flex-start;
+      font-size:.72rem; line-height:1.55; color:#7a96bc;
+    }
+    .detail-list li .di {
+      flex-shrink:0; width:18px; height:18px; border-radius:5px;
+      background:#0d1e3a; border:1px solid #1e3556;
+      display:flex; align-items:center; justify-content:center;
+      font-size:.6rem; font-weight:700; color:#2d4870; margin-top:1px;
+    }
+    .sc.active .detail-list li .di { background:#1a3060; border-color:#3b82f6; color:#60a5fa; }
+    .detail-list li code {
+      background:#0d1829; border:1px solid #1e2e4a; border-radius:4px;
+      padding:0 5px; font-size:.68rem; color:#67e8f9; font-family:'Courier New',monospace;
+    }
 
     .legend { display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-start; margin-top:14px; }
     .li { display:flex; align-items:center; gap:6px; font-size:.66rem; color:#2d3f5e; }
@@ -269,14 +318,141 @@
 <div class="step-section">
   <div class="steps-title">▸ Data Flow Steps</div>
   <div class="step-grid">
-    <div class="sc" id="s1"><div class="sn">1</div><div class="st"><strong>PSTN / User Dials ACS Number</strong><br>Inbound call arrives at your Azure Communication Services phone number.</div></div>
-    <div class="sc" id="s2"><div class="sn">2</div><div class="st"><strong>ACS Emits IncomingCall Event</strong><br>ACS publishes <code>Microsoft.Communication.IncomingCall</code> to Azure Event Grid.</div></div>
-    <div class="sc" id="s3"><div class="sn">3</div><div class="st"><strong>Event Grid POSTs to Custom Webhook</strong><br>HTTPS POST to your server's <code>/api/incoming-call</code>. Validate the subscription handshake.</div></div>
-    <div class="sc" id="s4"><div class="sn">4</div><div class="st"><strong>Webhook Answers + Attaches Media Stream</strong><br>Uses Call Automation SDK to answer and stream audio to your WebSocket server.</div></div>
-    <div class="sc" id="s5"><div class="sn">5</div><div class="st"><strong>ACS Opens WebSocket & Streams PCM Audio</strong><br>Real-time raw audio packets flow from ACS to your WebSocket server.</div></div>
-    <div class="sc" id="s6"><div class="sn">6</div><div class="st"><strong>Audio Forwarded to AI / LLM</strong><br>Your server pipes audio through STT → LLM pipeline (Gemini, Claude, GPT, etc.).</div></div>
-    <div class="sc" id="s7"><div class="sn">7</div><div class="st"><strong>AI Returns Synthesised Speech</strong><br>The AI processes the query and returns a TTS audio response to the WebSocket server.</div></div>
-    <div class="sc" id="s8"><div class="sn">8</div><div class="st"><strong>Audio Injected Back into Call</strong><br>Synthesised speech is streamed through ACS back to the caller. The loop repeats.</div></div>
+    <!-- Step 1 -->
+    <div class="sc" id="s1">
+      <div class="sc-header">
+        <div class="sn">1</div>
+        <div class="st"><strong>PSTN / User Dials ACS Number</strong><br>Inbound call arrives at your Azure Communication Services phone number.</div>
+        <button class="toggle-btn" onclick="toggleDetail('d1',this)">Details ▾</button>
+      </div>
+      <div class="detail-panel" id="d1">
+        <ul class="detail-list">
+          <li><span class="di">a</span>User picks up phone and dials the ACS-provisioned PSTN number.</li>
+          <li><span class="di">b</span>The PSTN network routes the call to Azure's telephony gateway via SIP.</li>
+          <li><span class="di">c</span>ACS receives the SIP INVITE and registers the call with a unique <code>callId</code>.</li>
+          <li><span class="di">d</span>Call is in <em>ringing / incoming</em> state — no audio exchanged yet.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="sc" id="s2">
+      <div class="sc-header">
+        <div class="sn">2</div>
+        <div class="st"><strong>ACS Emits IncomingCall Event</strong><br>ACS publishes <code>Microsoft.Communication.IncomingCall</code> to Azure Event Grid.</div>
+        <button class="toggle-btn" onclick="toggleDetail('d2',this)">Details ▾</button>
+      </div>
+      <div class="detail-panel" id="d2">
+        <ul class="detail-list">
+          <li><span class="di">a</span>ACS fires a <code>Microsoft.Communication.IncomingCall</code> CloudEvent.</li>
+          <li><span class="di">b</span>Payload contains: <code>callerId</code>, <code>incomingCallContext</code>, <code>to</code>, and an answer token.</li>
+          <li><span class="di">c</span>Event Grid routes the event to all subscribed webhook endpoints.</li>
+          <li><span class="di">d</span>Event Grid guarantees at-least-once delivery with automatic exponential-backoff retry.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="sc" id="s3">
+      <div class="sc-header">
+        <div class="sn">3</div>
+        <div class="st"><strong>Event Grid POSTs to Custom Webhook</strong><br>HTTPS POST to your server's <code>/api/incoming-call</code>. Validate the subscription handshake.</div>
+        <button class="toggle-btn" onclick="toggleDetail('d3',this)">Details ▾</button>
+      </div>
+      <div class="detail-panel" id="d3">
+        <ul class="detail-list">
+          <li><span class="di">a</span>Event Grid sends <code>HTTP POST</code> to <code>https://yourserver.com/api/incoming-call</code>.</li>
+          <li><span class="di">b</span><strong>First registration:</strong> Event Grid sends a <code>SubscriptionValidationEvent</code> — echo back the <code>validationCode</code>.</li>
+          <li><span class="di">c</span>Verify <code>aeg-event-type</code> header and that the payload is a valid CloudEvent.</li>
+          <li><span class="di">d</span>Extract <code>incomingCallContext</code> — required to answer the call via SDK.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="sc" id="s4">
+      <div class="sc-header">
+        <div class="sn">4</div>
+        <div class="st"><strong>Webhook Answers + Attaches Media Stream</strong><br>Uses Call Automation SDK to answer and stream audio to your WebSocket server.</div>
+        <button class="toggle-btn" onclick="toggleDetail('d4',this)">Details ▾</button>
+      </div>
+      <div class="detail-panel" id="d4">
+        <ul class="detail-list">
+          <li><span class="di">a</span>Call <code>callAutomationClient.answerCall(incomingCallContext, callbackUri)</code> from the ACS SDK.</li>
+          <li><span class="di">b</span>Provide <code>MediaStreamingOptions</code> with your WebSocket URL and audio format (<code>PCM 16 kHz mono</code>).</li>
+          <li><span class="di">c</span>ACS picks up the call and negotiates the media stream toward your WebSocket server.</li>
+          <li><span class="di">d</span>A <code>CallConnected</code> event fires to your callback URI once fully established.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="sc" id="s5">
+      <div class="sc-header">
+        <div class="sn">5</div>
+        <div class="st"><strong>ACS Opens WebSocket &amp; Streams PCM Audio</strong><br>Real-time raw audio packets flow from ACS to your WebSocket server.</div>
+        <button class="toggle-btn" onclick="toggleDetail('d5',this)">Details ▾</button>
+      </div>
+      <div class="detail-panel" id="d5">
+        <ul class="detail-list">
+          <li><span class="di">a</span>ACS initiates a WebSocket connection to <code>wss://yourserver.com/audio</code>.</li>
+          <li><span class="di">b</span>Audio is streamed as binary frames: raw <strong>PCM 16 kHz, 16-bit, mono</strong>, little-endian.</li>
+          <li><span class="di">c</span>Each frame includes a JSON metadata header (participant ID, timestamp) before the audio bytes.</li>
+          <li><span class="di">d</span>Your server buffers chunks and feeds them to the STT engine in real time.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="sc" id="s6">
+      <div class="sc-header">
+        <div class="sn">6</div>
+        <div class="st"><strong>Audio Forwarded to AI / LLM</strong><br>Your server pipes audio through STT → LLM pipeline (Gemini, Claude, GPT, etc.).</div>
+        <button class="toggle-btn" onclick="toggleDetail('d6',this)">Details ▾</button>
+      </div>
+      <div class="detail-panel" id="d6">
+        <ul class="detail-list">
+          <li><span class="di">a</span><strong>STT:</strong> PCM chunks sent to Google STT / Azure STT / Deepgram to produce a text transcript.</li>
+          <li><span class="di">b</span>Voice-activity detection assembles chunks into a complete user utterance.</li>
+          <li><span class="di">c</span><strong>LLM:</strong> Transcript sent to your AI model (Gemini, Claude, GPT-4o) with system prompt + history.</li>
+          <li><span class="di">d</span>The LLM streams back a text response token-by-token for the TTS stage.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="sc" id="s7">
+      <div class="sc-header">
+        <div class="sn">7</div>
+        <div class="st"><strong>AI Returns Synthesised Speech</strong><br>The AI processes the query and returns a TTS audio response to the WebSocket server.</div>
+        <button class="toggle-btn" onclick="toggleDetail('d7',this)">Details ▾</button>
+      </div>
+      <div class="detail-panel" id="d7">
+        <ul class="detail-list">
+          <li><span class="di">a</span><strong>TTS:</strong> LLM response text sent to Azure Neural TTS / Google TTS / ElevenLabs.</li>
+          <li><span class="di">b</span>TTS returns synthesised audio in PCM or µ-law format matching ACS's expected codec.</li>
+          <li><span class="di">c</span>Audio is streamed chunk-by-chunk from TTS to minimise latency (first-byte time).</li>
+          <li><span class="di">d</span>Your server queues audio chunks ready to send back over the WebSocket.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 8 -->
+    <div class="sc" id="s8">
+      <div class="sc-header">
+        <div class="sn">8</div>
+        <div class="st"><strong>Audio Injected Back into Call</strong><br>Synthesised speech is streamed through ACS back to the caller. The loop repeats.</div>
+        <button class="toggle-btn" onclick="toggleDetail('d8',this)">Details ▾</button>
+      </div>
+      <div class="detail-panel" id="d8">
+        <ul class="detail-list">
+          <li><span class="di">a</span>Your server sends synthesised PCM frames back to ACS over the same WebSocket.</li>
+          <li><span class="di">b</span>ACS injects the audio stream directly into the active call, playing it to the PSTN caller.</li>
+          <li><span class="di">c</span>ACS continues streaming the caller's audio back — enabling barge-in / interruption detection.</li>
+          <li><span class="di">d</span>Once the response finishes, the pipeline resets and awaits the next utterance (Steps 5→8 repeat).</li>
+        </ul>
+      </div>
+    </div>
   </div>
   <div class="legend">
     <div class="li"><div class="ld" style="background:#3b82f6"></div>Call signalling</div>
@@ -354,6 +530,12 @@ function startAnim() {
     document.getElementById('btnPlay').textContent = '▶ Replay';
     running = false;
   }, t + 400));
+}
+function toggleDetail(panelId, btn) {
+  const panel = document.getElementById(panelId);
+  const isOpen = panel.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  btn.textContent = isOpen ? 'Details ▴' : 'Details ▾';
 }
 </script>
 </body>
