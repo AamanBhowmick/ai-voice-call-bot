@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ACS Diagram</title>
+  <style>
+    /* Load the main page in an iframe and inject CSS to hide right panel */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #07091a;
+      width: 800px;
+      height: 560px;
+      overflow: hidden;
+    }
+    iframe {
+      width: 1400px;
+      height: 900px;
+      border: none;
+      transform: scale(0.571);
+      transform-origin: 0 0;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="fr" src="index.html"></iframe>
+  <script>
+    const fr = document.getElementById('fr');
+    fr.addEventListener('load', () => {
+      const doc = fr.contentDocument;
+
+      // Hide right column (step cards)
+      const stepsCol = doc.querySelector('.steps-col');
+      if (stepsCol) stepsCol.style.display = 'none';
+
+      // Hide heading, subtitle, guide section, security section etc
+      const h1 = doc.querySelector('h1');
+      if (h1) h1.style.display = 'none';
+      const sub = doc.querySelector('.sub');
+      if (sub) sub.style.display = 'none';
+
+      // Make svg-col full width
+      const svgCol = doc.querySelector('.svg-col');
+      if (svgCol) { svgCol.style.flex = '1'; svgCol.style.width = '100%'; }
+
+      // Auto-start animation after a short delay
+      setTimeout(() => {
+        const playBtn = doc.querySelector('.btn-play');
+        if (playBtn) playBtn.click();
+      }, 800);
+
+      // Loop: restart animation every 18 seconds
+      setInterval(() => {
+        const resetBtn = doc.querySelector('.btn-reset');
+        const playBtn  = doc.querySelector('.btn-play');
+        if (resetBtn) resetBtn.click();
+        setTimeout(() => { if (playBtn) playBtn.click(); }, 400);
+      }, 18000);
+    });
+  </script>
+</body>
+</html>
