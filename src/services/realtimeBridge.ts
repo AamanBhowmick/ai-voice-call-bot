@@ -2,19 +2,21 @@
  * Azure OpenAI Realtime Bridge
  * ─────────────────────────────────────────────────────────────────────────────
  * Bridges two WebSocket connections:
- *   1. ACS WebSocket  — incoming PCM audio from the caller, outgoing audio to the caller
+ *   1. Caller WebSocket — incoming PCM audio from Exotel, outgoing audio to caller
  *   2. Azure OpenAI Realtime WebSocket — full duplex STT + LLM + TTS in one
  *
  * Data flow:
- *   Caller ──(PCM audio)──► ACS ──(base64 audio)──► This server ──► OpenAI Realtime
- *   Caller ◄──(PCM audio)── ACS ◄──────(base64)──── This server ◄── OpenAI Realtime
+ *   Caller ──(8kHz PCM)──► Exotel ──(base64)──► This server ──(24kHz)──► OpenAI Realtime
+ *   Caller ◄──(8kHz PCM)── Exotel ◄──(base64)── This server ◄──(24kHz)── OpenAI Realtime
  *
  * OpenAI Realtime handles everything: VAD, transcription, LLM response, TTS.
- * When the caller starts speaking mid-response (barge-in), we send StopAudio to ACS.
+ * Resampling (8↔24kHz) is handled transparently by this bridge.
  */
 
 import WebSocket from "ws";
 import logger from "../logger.ts";
+import { downsample24to8, upsample8to24 } from "./resample.ts";
+import { sendAudioToExotel } from "./wsServer.ts";
 
 // ── Config ───────────────────────────────────────────────────────────────────
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT!;
@@ -32,23 +34,21 @@ type OpenAIMessage = Record<string, unknown>;
 
 // ── RealtimeBridge ────────────────────────────────────────────────────────────
 export class RealtimeBridge {
-  private acsWs: WebSocket;           // socket to/from ACS (the caller's audio)
+  private callerWs: WebSocket;          // socket to/from Exotel (the caller's audio)
   private openaiWs: WebSocket | null = null; // socket to Azure OpenAI Realtime
-  private callConnectionId: string;
+  private streamSid: string;
 
-  constructor(acsWs: WebSocket, callConnectionId: string) {
-    this.acsWs = acsWs;
-    this.callConnectionId = callConnectionId;
+  constructor(callerWs: WebSocket, streamSid: string) {
+    this.callerWs = callerWs;
+    this.streamSid = streamSid;
   }
 
   // ── 1. Start: connect to OpenAI Realtime and configure the session ─────────
   async start() {
-    // Build the WebSocket URL for Azure OpenAI Realtime
-    // Format: wss://{endpoint}/openai/realtime?api-version=...&deployment=...
     const endpoint = AZURE_OPENAI_ENDPOINT.replace(/^https?:\/\//, "");
     const url = `wss://${endpoint}/openai/realtime?api-version=${AZURE_OPENAI_API_VERSION}&deployment=${AZURE_OPENAI_DEPLOYMENT}`;
 
-    logger.info({ callConnectionId: this.callConnectionId, url }, "Connecting to Azure OpenAI Realtime...");
+    logger.info({ streamSid: this.streamSid, url }, "Connecting to Azure OpenAI Realtime...");
 
     this.openaiWs = new WebSocket(url, {
       headers: {
@@ -58,7 +58,7 @@ export class RealtimeBridge {
     });
 
     this.openaiWs.on("open", () => {
-      logger.info({ callConnectionId: this.callConnectionId }, "✅ Connected to Azure OpenAI Realtime");
+      logger.info({ streamSid: this.streamSid }, "✅ Connected to Azure OpenAI Realtime");
       this.configureSession();
     });
 
@@ -67,11 +67,11 @@ export class RealtimeBridge {
     });
 
     this.openaiWs.on("error", (err) => {
-      logger.error({ err, callConnectionId: this.callConnectionId }, "OpenAI Realtime WS error");
+      logger.error({ err, streamSid: this.streamSid }, "OpenAI Realtime WS error");
     });
 
     this.openaiWs.on("close", () => {
-      logger.info({ callConnectionId: this.callConnectionId }, "OpenAI Realtime WS closed");
+      logger.info({ streamSid: this.streamSid }, "OpenAI Realtime WS closed");
     });
   }
 
@@ -80,88 +80,83 @@ export class RealtimeBridge {
     const sessionUpdate = {
       type: "session.update",
       session: {
-        // Voice for TTS responses — options: alloy, echo, shimmer, fable, onyx, nova
         voice: process.env.OPENAI_VOICE ?? "alloy",
         instructions: SYSTEM_PROMPT,
-        // Audio format ACS sends us: PCM 24kHz mono (set in answerCall)
+        // Audio format: PCM 24kHz mono (we resample from/to Exotel's 8kHz)
         input_audio_format: "pcm16",
         output_audio_format: "pcm16",
         // Built-in server-side Voice Activity Detection
-        // → detects when caller stops speaking and triggers AI response automatically
         turn_detection: {
           type: "server_vad",
-          threshold: 0.5,           // sensitivity 0-1 (lower = more sensitive)
-          silence_duration_ms: 300, // wait 300ms of silence before responding
-          prefix_padding_ms: 200,   // include 200ms before speech onset
+          threshold: 0.5,
+          silence_duration_ms: 300,
+          prefix_padding_ms: 200,
         },
-        // Enable Whisper transcription so we can log what the caller said
         input_audio_transcription: { model: "whisper-1" },
       },
     };
 
     this.sendToOpenAI(sessionUpdate);
-    logger.info({ callConnectionId: this.callConnectionId }, "Session configured with VAD");
+    logger.info({ streamSid: this.streamSid }, "Session configured with VAD");
   }
 
-  // ── 3. Receive audio from ACS → forward to OpenAI Realtime ───────────────
-  // Call this from wsServer.ts whenever an audio frame arrives from ACS.
+  // ── 3. Receive audio from Exotel → upsample → forward to OpenAI ──────────
   sendCallerAudio(base64Audio: string) {
+    // Exotel sends 8kHz PCM → upsample to 24kHz for OpenAI Realtime
+    const input8k = Buffer.from(base64Audio, "base64");
+    const output24k = upsample8to24(input8k);
+
     this.sendToOpenAI({
       type: "input_audio_buffer.append",
-      audio: base64Audio,
+      audio: output24k.toString("base64"),
     });
   }
 
-  // ── 4. Handle messages from OpenAI Realtime → act or forward to ACS ───────
+  // ── 4. Handle messages from OpenAI Realtime → act or forward to caller ────
   private async handleOpenAIMessage(msg: OpenAIMessage) {
     switch (msg.type) {
       // ── Session ready ──────────────────────────────────────────────────────
       case "session.created":
-        logger.info({ callConnectionId: this.callConnectionId }, "OpenAI session created");
-        // Send an initial greeting to kick off the conversation
+        logger.info({ streamSid: this.streamSid }, "OpenAI session created");
         this.triggerInitialGreeting();
         break;
 
       // ── Caller started speaking (barge-in) ─────────────────────────────────
-      // OpenAI VAD detected the caller speaking while the bot is talking.
-      // Send StopAudio to ACS to cut off the bot's current audio immediately.
       case "input_audio_buffer.speech_started":
-        logger.info({ callConnectionId: this.callConnectionId }, "🎙 Caller speaking — barge-in detected");
-        this.sendToACS({ Kind: "StopAudio", AudioData: null, StopAudio: {} });
+        logger.info({ streamSid: this.streamSid }, "🎙 Caller speaking — barge-in detected");
+        // Send a clear/mark event to Exotel to stop current playback
+        this.sendClearToExotel();
         break;
 
-      // ── Transcription of what the caller said (for logging) ──────────────
+      // ── Transcription of what the caller said ──────────────────────────────
       case "conversation.item.input_audio_transcription.completed":
-        logger.info({ callConnectionId: this.callConnectionId, transcript: msg.transcript }, "👤 Caller said");
+        logger.info({ streamSid: this.streamSid, transcript: msg.transcript }, "👤 Caller said");
         break;
 
-      // ── AI audio response chunk — forward to ACS ──────────────────────────
-      // OpenAI streams the TTS audio as base64 PCM deltas.
-      // We wrap it in the ACS AudioData format and send it back over the
-      // ACS WebSocket — this is what the caller hears.
-      case "response.audio.delta":
-        this.sendToACS({
-          Kind: "AudioData",
-          AudioData: { Data: msg.delta },
-          StopAudio: null,
-        });
+      // ── AI audio response chunk → downsample → forward to Exotel ──────────
+      case "response.audio.delta": {
+        const base64_24k = msg.delta as string;
+        const pcm24k = Buffer.from(base64_24k, "base64");
+        const pcm8k = downsample24to8(pcm24k);
+
+        sendAudioToExotel(this.callerWs, this.streamSid, pcm8k.toString("base64"));
         break;
+      }
 
       // ── Full AI text transcript (for logging) ─────────────────────────────
       case "response.audio_transcript.done":
-        logger.info({ callConnectionId: this.callConnectionId, transcript: msg.transcript }, "🤖 AI said");
+        logger.info({ streamSid: this.streamSid, transcript: msg.transcript }, "🤖 AI said");
         break;
 
       // ── Errors ────────────────────────────────────────────────────────────
       case "error":
-        logger.error({ callConnectionId: this.callConnectionId, error: msg.error }, "OpenAI Realtime error");
+        logger.error({ streamSid: this.streamSid, error: msg.error }, "OpenAI Realtime error");
         break;
     }
   }
 
   // ── 5. Optional: trigger an initial greeting when the call connects ────────
   private triggerInitialGreeting() {
-    // Tell OpenAI to generate an opening message from the assistant
     this.sendToOpenAI({ type: "response.create" });
   }
 
@@ -172,15 +167,17 @@ export class RealtimeBridge {
     }
   }
 
-  private sendToACS(msg: object) {
-    if (this.acsWs.readyState === WebSocket.OPEN) {
-      this.acsWs.send(JSON.stringify(msg));
+  private sendClearToExotel() {
+    if (this.callerWs.readyState === WebSocket.OPEN) {
+      this.callerWs.send(JSON.stringify({
+        event: "clear",
+        streamSid: this.streamSid,
+      }));
     }
   }
 
-  // Called when the ACS connection closes (caller hung up)
   close() {
     this.openaiWs?.close();
-    logger.info({ callConnectionId: this.callConnectionId }, "RealtimeBridge closed");
+    logger.info({ streamSid: this.streamSid }, "RealtimeBridge closed");
   }
 }

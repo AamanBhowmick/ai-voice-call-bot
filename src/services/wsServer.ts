@@ -1,138 +1,148 @@
 /**
- * WebSocket Server
+ * WebSocket Server — Exotel Voicebot Applet
  * ─────────────────────────────────────────────────────────────────────────────
- * Handles incoming WebSocket connections from ACS (audio stream).
+ * Handles incoming WebSocket connections from Exotel's Voicebot Applet.
+ *
+ * Exotel WebSocket protocol:
+ *   1. "connected"  — session started, contains streamSid + call metadata
+ *   2. "media"      — audio frame, base64-encoded PCM 8kHz 16-bit mono
+ *   3. "stop"       — stream ending (caller hung up or flow ended)
  *
  * AI_PROVIDER env var controls which pipeline handles audio:
  *   "azure_openai_realtime"  → bridges to Azure OpenAI Realtime (default)
- *                              — single WS handles STT + LLM + TTS, lowest latency
  *   "custom"                 → runs the separate stt.ts → llm.ts → tts.ts chain
- *                              — use this when you want your own Gemini/Claude/etc keys
  */
 
-import WebSocket, { WebSocketServer } from "ws";
 import type { IncomingMessage } from "http";
+import WebSocket, { WebSocketServer } from "ws";
 import logger from "../logger.ts";
+import { askLLM } from "./llm.ts";
 import { RealtimeBridge } from "./realtimeBridge.ts";
 import { transcribeAudio } from "./stt.ts";
-import { askLLM } from "./llm.ts";
 import { synthesiseSpeech } from "./tts.ts";
 
 const AI_PROVIDER = process.env.AI_PROVIDER ?? "azure_openai_realtime";
-
-// ── Active session registry ───────────────────────────────────────────────────
-// Stores callConnectionId → RealtimeBridge (or custom session state)
-// Used to validate that incoming WebSocket connections belong to a real answered call.
-const activeSessions = new Map<string, { registered: boolean }>();
-
-export function registerSession(callConnectionId: string) {
-  activeSessions.set(callConnectionId, { registered: true });
-  logger.info({ callConnectionId, provider: AI_PROVIDER }, "Session registered — awaiting WebSocket");
-}
-
-export function unregisterSession(callConnectionId: string) {
-  activeSessions.delete(callConnectionId);
-}
 
 // ── WebSocket server factory ──────────────────────────────────────────────────
 export function createWsServer() {
   const wss = new WebSocketServer({ noServer: true });
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-    logger.info({ url: req.url, provider: AI_PROVIDER }, "New WebSocket connection");
+    logger.info({ url: req.url, provider: AI_PROVIDER }, "New WebSocket connection from Exotel");
 
-    // State for this connection
-    let callConnectionId: string | null = null;
+    // Session state
+    let streamSid: string | null = null;
     let bridge: RealtimeBridge | null = null;
 
-    // Custom pipeline state (used when AI_PROVIDER === "custom")
+    // Custom pipeline state
     const audioChunks: Buffer[] = [];
     const conversationHistory: { role: string; content: string }[] = [];
 
-    ws.on("message", async (data: Buffer | string) => {
+    ws.on("message", async (raw: Buffer | string) => {
       try {
-        // ACS sends JSON frames (control messages + base64 audio in some modes)
-        // and binary frames (raw PCM audio in direct binary mode).
-        const isString = typeof data === "string";
-        const json = isString ? tryParseJSON(data) : tryParseJSON(data.toString());
+        const msg = parseMessage(raw);
+        if (!msg) return;
 
-        if (json) {
-          // ── JSON frame ────────────────────────────────────────────────────
-          // First JSON frame from ACS contains the callConnectionId —
-          // use it to authenticate this WebSocket against our session registry.
-          if (json.callConnectionId && !callConnectionId) {
-            const id = json.callConnectionId as string;
-            if (!activeSessions.has(id)) {
-              logger.warn({ id }, "Unknown callConnectionId — closing socket");
-              ws.close(1008, "Unauthorised");
-              return;
-            }
-            callConnectionId = id;
-            logger.info({ callConnectionId }, "WebSocket authenticated ✅");
+        switch (msg.event) {
+          // ── Connected: Exotel opens the stream ──────────────────────────────
+          case "connected":
+            streamSid = msg.streamSid ?? msg.stream_sid ?? null;
+            logger.info(
+              { streamSid, callSid: msg.start?.callSid ?? msg.callSid },
+              "🔗 Exotel stream connected"
+            );
 
             // Start AI provider
             if (AI_PROVIDER === "azure_openai_realtime") {
-              bridge = new RealtimeBridge(ws, callConnectionId);
+              bridge = new RealtimeBridge(ws, streamSid ?? "unknown");
               await bridge.start();
             }
-          }
+            break;
 
-          // Handle incoming audio data frames (JSON mode)
-          if (json.kind === "AudioData" && json.audioData?.data) {
-            const base64Audio = json.audioData.data as string;
+          // ── Start: stream metadata (some Exotel versions send this) ─────────
+          case "start":
+            streamSid = msg.streamSid ?? msg.stream_sid ?? streamSid;
+            logger.info({ streamSid, metadata: msg.start }, "▶ Stream started");
+
+            if (!bridge && AI_PROVIDER === "azure_openai_realtime") {
+              bridge = new RealtimeBridge(ws, streamSid ?? "unknown");
+              await bridge.start();
+            }
+            break;
+
+          // ── Media: audio frame from the caller ──────────────────────────────
+          case "media": {
+            if (!msg.media?.payload) break;
+
+            const base64Audio = msg.media.payload as string;
+
             if (AI_PROVIDER === "azure_openai_realtime" && bridge) {
-              // Forward directly to OpenAI Realtime — it handles everything.
+              // Forward to OpenAI Realtime (bridge handles resampling)
               bridge.sendCallerAudio(base64Audio);
             } else if (AI_PROVIDER === "custom") {
-              // Decode base64 → Buffer and accumulate for custom pipeline
+              // Decode and accumulate for custom pipeline
               audioChunks.push(Buffer.from(base64Audio, "base64"));
-              await maybeRunCustomPipeline(ws, audioChunks, conversationHistory);
+              await maybeRunCustomPipeline(ws, streamSid, audioChunks, conversationHistory);
             }
+            break;
           }
 
-          if (json.kind === "StopStream") {
-            logger.info({ callConnectionId }, "Stream stopped by ACS");
-          }
+          // ── Stop: stream ending ─────────────────────────────────────────────
+          case "stop":
+            logger.info({ streamSid }, "⏹ Exotel stream stopped");
+            break;
 
-        } else if (Buffer.isBuffer(data)) {
-          // ── Binary PCM frame (only in binary streaming mode) ──────────────
-          if (!callConnectionId) return;
-
-          if (AI_PROVIDER === "azure_openai_realtime" && bridge) {
-            // Convert raw binary to base64 for OpenAI Realtime
-            bridge.sendCallerAudio(data.toString("base64"));
-          } else if (AI_PROVIDER === "custom") {
-            audioChunks.push(data);
-            await maybeRunCustomPipeline(ws, audioChunks, conversationHistory);
-          }
+          default:
+            logger.debug({ event: msg.event, streamSid }, "Unhandled Exotel WS event");
         }
       } catch (err) {
-        logger.error({ err, callConnectionId }, "Error processing WebSocket message");
+        logger.error({ err, streamSid }, "Error processing Exotel WebSocket message");
       }
     });
 
     ws.on("close", () => {
-      logger.info({ callConnectionId }, "WebSocket closed — call ended");
+      logger.info({ streamSid }, "WebSocket closed — call ended");
       bridge?.close();
-      if (callConnectionId) unregisterSession(callConnectionId);
     });
 
     ws.on("error", (err) => {
-      logger.error({ err, callConnectionId }, "WebSocket error");
+      logger.error({ err, streamSid }, "WebSocket error");
     });
   });
 
   return wss;
 }
 
+// ── Send audio back to the caller via Exotel ──────────────────────────────────
+// Exotel expects media frames in this format for bidirectional streaming.
+export function sendAudioToExotel(
+  ws: WebSocket,
+  streamSid: string,
+  base64Audio: string
+) {
+  if (ws.readyState !== WebSocket.OPEN) return;
+
+  ws.send(
+    JSON.stringify({
+      event: "media",
+      streamSid,
+      media: {
+        payload: base64Audio,
+      },
+    })
+  );
+}
+
 // ── Custom pipeline: accumulate PCM → STT → LLM → TTS → send back ────────────
-// Used when AI_PROVIDER=custom. Triggers after ~2s of audio (100 × 20ms chunks).
+// Triggers after ~2s of audio. Exotel sends 8kHz 16-bit mono = ~50 chunks @ 20ms.
 async function maybeRunCustomPipeline(
   ws: WebSocket,
+  streamSid: string | null,
   audioChunks: Buffer[],
   history: { role: string; content: string }[]
 ) {
-  if (audioChunks.length < 100) return; // Wait for ~2s of audio
+  // 8kHz × 2 bytes × 0.02s = 320 bytes per 20ms frame → 100 frames ≈ 2s
+  if (audioChunks.length < 100) return;
 
   const audioBuffer = Buffer.concat(audioChunks);
   audioChunks.length = 0;
@@ -148,21 +158,23 @@ async function maybeRunCustomPipeline(
 
   const speechBuffer = await synthesiseSpeech(responseText);
 
-  // Send TTS audio back to ACS in chunks
-  const CHUNK = 3200; // 100ms of PCM 16kHz 16-bit mono
+  // Send TTS audio back to caller in chunks
+  // 8kHz × 2 bytes × 0.1s = 1600 bytes per 100ms chunk
+  const CHUNK = 1600;
   for (let i = 0; i < speechBuffer.length; i += CHUNK) {
     if (ws.readyState === WebSocket.OPEN) {
       const chunk = speechBuffer.subarray(i, i + CHUNK);
-      // ACS expects JSON-wrapped base64 audio in AudioData format
-      ws.send(JSON.stringify({
-        Kind: "AudioData",
-        AudioData: { Data: chunk.toString("base64") },
-        StopAudio: null,
-      }));
+      sendAudioToExotel(ws, streamSid ?? "", chunk.toString("base64"));
     }
   }
 }
 
-function tryParseJSON(str: string): Record<string, unknown> | null {
-  try { return JSON.parse(str); } catch { return null; }
+// ── Parse incoming message ────────────────────────────────────────────────────
+function parseMessage(raw: Buffer | string): Record<string, any> | null {
+  try {
+    const str = typeof raw === "string" ? raw : raw.toString();
+    return JSON.parse(str);
+  } catch {
+    return null;
+  }
 }

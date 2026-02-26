@@ -617,16 +617,129 @@
           <div class="phase-section-title">Create ACS Resource</div>
           <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">In the portal search bar, type <strong>Communication Services</strong> → click it → click <strong>+ Create</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> This provisions your telephony engine on Azure. Without it you cannot receive or manage phone calls programmatically.</span></div></div>
           <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Select <strong>Resource group</strong> → <code>rg-voice-bot</code>. Enter <strong>Resource name</strong> → e.g. <code>acs-voice-bot</code>. Set <strong>Data location</strong> → <code>United States</code> (or your region).<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why the data location matters:</em> This is where ACS physically stores call metadata and recordings. Pick the region closest to your users for lowest latency and to satisfy data residency rules.</span></div></div>
-          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Click <strong>Review + create</strong> → <strong>Create</strong>. Once deployed, open the resource → click <strong>Keys</strong> in the left sidebar → copy the <strong>Connection string</strong> and save it somewhere safe.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why the connection string:</em> This is the password your code uses to authenticate with ACS and make SDK calls (e.g. answer a call, stream audio). Never share it publicly.</span></div></div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">Click <strong>Review + create</strong> at the bottom of the form → review the summary → click <strong>Create</strong>. Wait 30–60 seconds for Azure to finish deploying.</div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Once deployment completes, you'll see a <em>"Your deployment is complete"</em> page. Click the <strong>Go to resource</strong> button (blue button, centre of the page).<br><span style="color:#4a6080;font-size:.68rem">↳ <em>If you accidentally close this page:</em> Go to the portal home → search <strong>Communication Services</strong> in the top search bar → click it → you'll see a list of all your ACS resources → click the one you just created (e.g. <code>acs-voice-bot</code>).</span></div></div>
+          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">You are now inside your <strong>ACS resource page</strong>. Look at the <strong>left sidebar</strong> (vertical menu). Scroll down to the <strong>Settings</strong> section and click <strong>Keys</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Can't find it?</em> The left sidebar is grouped into sections: <em>Overview, Activity log, Access control…</em> then a section called <strong>Settings</strong>. Under Settings you'll see <strong>Keys</strong>, <em>Properties</em>, <em>Locks</em>, etc. Click <strong>Keys</strong>.</span></div></div>
+          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">On the Keys page you'll see two keys (<strong>Key 1</strong> and <strong>Key 2</strong>). Each has an <strong>Endpoint</strong>, a <strong>Key</strong>, and a <strong>Connection string</strong>. Click the 📋 copy icon next to the <strong>Connection string</strong> under <strong>Key 1</strong> and paste it somewhere safe (e.g. a notes app or password manager).<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why the connection string:</em> This is the password your code uses to authenticate with ACS and make SDK calls (e.g. answer a call, stream audio). Never share it publicly. Two keys exist so you can rotate one without downtime — for now just use Key 1.</span></div></div>
           <div class="phase-section-title">Buy a Phone Number</div>
-          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Inside your ACS resource → click <strong>Phone numbers</strong> in the left sidebar → <strong>+ Get</strong> → <strong>Get a number</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> This is the actual dialable phone number your users will call. ACS routes calls to this number into your system.</span></div></div>
-          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Select your <strong>Country</strong>. Set <strong>Number type</strong> → <code>Toll-free</code> (free for callers, you pay per minute) or <code>Geographic</code> (local area number). Under <strong>Features</strong> → make sure <code>Voice calls</code> is checked.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why Voice calls must be checked:</em> ACS numbers can be configured for SMS only, voice only, or both. Our bot needs voice — checking this enables the call-receive capability.</span></div></div>
-          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">Click <strong>Search</strong> → pick any available number → click <strong>Buy</strong>. Write this number down (e.g. <code>+12025550123</code>) — this is what callers will dial.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Cost note:</em> Phone numbers cost roughly $1–2/month to lease. Inbound calls cost ~$0.004/min on top of that.</span></div></div>
+          <div class="pstep"><div class="pstep-num">7</div><div class="pstep-text">Inside your ACS resource → in the left sidebar, scroll to the <strong>Telephony and SMS</strong> section → click <strong>Phone numbers</strong>. In the top toolbar click <strong>+ Get</strong> (first button in the row, next to "Port", "Release", "Compare").<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> This is the actual dialable phone number your users will call. ACS routes calls to this number into your system.</span></div></div>
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>"+ Get" button is greyed out / disabled?</strong> This happens when your Azure subscription doesn't support direct phone number purchases. Common causes and fixes:<br><br>
+            <strong>1. Free Trial subscription</strong> — Azure Free Trial does not allow purchasing phone numbers. Fix: Upgrade to a <strong>Pay-As-You-Go</strong> subscription (portal → Subscriptions → click yours → <strong>Upgrade</strong>). You won't be charged until you exceed free credits.<br>
+            <strong>2. Region / country not supported</strong> — ACS phone numbers are only available in certain countries (US, UK, Canada, etc.). If your ACS Data Location is set to an unsupported region, the button stays disabled. Fix: Create a new ACS resource with Data Location set to <code>United States</code>.<br>
+            <strong>3. Identity verification required</strong> — Some countries require regulatory documents before you can buy numbers. Check <strong>Regulatory Documents</strong> in the left sidebar.<br>
+            <strong>4. Service limits reached</strong> — If you see "0 out of 0 available" (instead of "0 out of 5"), click <strong>Request an upgrade</strong> link at the top of the Phone numbers page to raise your quota.
+          </div>
+          <div class="pnote"><span class="pnote-icon">ℹ</span><strong>Ignore "Messaging Connect".</strong> The main area may show a <em>Messaging Connect (Preview)</em> prompt — this is a separate feature for leasing <strong>SMS-only</strong> numbers through third-party partners. It has <strong>nothing to do with voice calls</strong>. Always use the <strong>+ Get</strong> button in the top toolbar instead.</div>
+          <div class="pstep"><div class="pstep-num">8</div><div class="pstep-text">Select your <strong>Country</strong>. Set <strong>Number type</strong> → <code>Toll-free</code> (free for callers, you pay per minute) or <code>Geographic</code> (local area number). Under <strong>Features</strong> → make sure <code>Voice calls</code> is checked.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why Voice calls must be checked:</em> ACS numbers can be configured for SMS only, voice only, or both. Our bot needs voice — checking this enables the call-receive capability.</span></div></div>
+          <div class="pstep"><div class="pstep-num">9</div><div class="pstep-text">Click <strong>Search</strong> → pick any available number → click <strong>Buy</strong>. Write this number down (e.g. <code>+12025550123</code>) — this is what callers will dial.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Cost note:</em> Phone numbers cost roughly $1–2/month to lease. Inbound calls cost ~$0.004/min on top of that.</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 2B — EXOTEL ALTERNATIVE -->
+    <div class="phase" id="ph2b">
+      <div class="phase-header" onclick="togglePhase('ph2b')">
+        <div class="phase-num" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);">2B</div>
+        <div class="phase-info">
+          <div class="phase-name">Alternative: Use Exotel (Indian Telephony)</div>
+          <div class="phase-desc">Indian toll-free / virtual number with WebSocket audio streaming — ideal when ACS numbers aren't available in your region</div>
+        </div>
+        <span class="phase-arrow">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-content">
+          <div class="ptip"><span class="ptip-icon">💡</span><strong>When to use this option:</strong> ACS does not sell Indian phone numbers, and Twilio doesn't offer Indian numbers either (TRAI regulations). <strong>Exotel</strong> is India's leading cloud telephony provider — it supports Indian toll-free and virtual numbers, and has a <strong>Voicebot Applet</strong> with bidirectional WebSocket audio streaming, which is exactly what our AI voice bot needs.</div>
+          <div class="pnote"><span class="pnote-icon">ℹ</span><strong>How it works with Exotel:</strong> Exotel replaces both ACS <em>and</em> Event Grid in our architecture. When a call comes in on your Exotel number, Exotel's call flow hits your webhook (Passthru Applet), and the Voicebot Applet opens a bidirectional WebSocket to your server — streaming real-time audio in both directions. Your AI pipeline (STT → LLM → TTS) stays <strong>exactly the same</strong>.</div>
+
+          <div class="phase-section-title">Step 1 — Create an Exotel Account &amp; Get a Number</div>
+          <div class="pstep"><div class="pstep-num">1</div><div class="pstep-text">Go to <a href="https://exotel.com/get-started/" target="_blank">exotel.com/get-started</a> and sign up. You'll need to submit <strong>KYC documents</strong> (business PAN, address proof) — Exotel typically activates accounts within <strong>1–3 business days</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why KYC:</em> Indian telecom regulations (TRAI) require identity verification before issuing any virtual or toll-free number. This is mandatory for all Indian providers.</span></div></div>
+          <div class="pstep"><div class="pstep-num">2</div><div class="pstep-text">Once your account is active, go to <strong>ExoPhone</strong> section → you should already have a toll-free number assigned (or purchase one from the Exotel dashboard). Note down this number — this is what callers will dial.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>ExoPhone:</em> This is Exotel's term for your virtual phone number. It's the entry point for all incoming calls into your system.</span></div></div>
+
+          <div class="phase-section-title">Step 2 — Get Your API Credentials</div>
+          <div class="pstep"><div class="pstep-num">3</div><div class="pstep-text">In the Exotel Dashboard, go to <strong>Settings</strong> → <strong>API Settings</strong> (or <strong>Developers</strong> → <strong>API Credentials</strong>). Copy these three values:<br>
+            • <strong>Account SID</strong> — your unique account identifier (visible on the dashboard home page too)<br>
+            • <strong>API Key</strong> — used as the username for API authentication<br>
+            • <strong>API Token</strong> — used as the password for API authentication<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why three values:</em> Exotel uses HTTP Basic Auth — your API Key is the username and API Token is the password. The Account SID identifies which account you're operating on. Together they authenticate all API calls.</span></div></div>
+          <div class="pstep"><div class="pstep-num">4</div><div class="pstep-text">Also note your <strong>Exotel subdomain</strong> — it's the hostname you use for API calls, typically <code>api.exotel.com</code> or a region-specific one like <code>api.in.exotel.com</code>. Check your Exotel dashboard for the exact URL.</div></div>
+          <div class="pstep"><div class="pstep-num">5</div><div class="pstep-text">Save all credentials in your <code>.env</code> file:</div></div>
+          <div class="pcode"><span class="cmt"># Exotel credentials</span>
+<span class="kw">EXOTEL_ACCOUNT_SID</span>=<span class="str">your_account_sid</span>
+<span class="kw">EXOTEL_API_KEY</span>=<span class="str">your_api_key</span>
+<span class="kw">EXOTEL_API_TOKEN</span>=<span class="str">your_api_token</span>
+<span class="kw">EXOTEL_PHONE_NUMBER</span>=<span class="str">your_exophone_number</span>
+<span class="kw">EXOTEL_API_BASE</span>=<span class="str">https://api.exotel.com</span></div>
+
+          <div class="phase-section-title">Step 3 — Configure the Call Flow</div>
+          <div class="pstep"><div class="pstep-num">6</div><div class="pstep-text">In the Exotel Dashboard, go to <strong>App Bazaar</strong> (or <strong>Call Flows</strong>). You need to create a flow that does two things: ① hits your webhook when a call arrives, and ② opens a WebSocket audio stream to your server.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>What is a Call Flow:</em> Exotel uses a visual flow builder where you connect "applets" (building blocks) to define what happens during a call — like a flowchart. Each applet performs one action (play greeting, forward call, stream audio, etc.).</span></div></div>
+          <div class="pstep"><div class="pstep-num">7</div><div class="pstep-text">Create a new flow and add the <strong>Passthru Applet</strong> as the first step. Set its <strong>URL</strong> to your server's webhook endpoint: <code>https://your-server.com/api/exotel-incoming</code>. Set method to <strong>GET</strong> or <strong>POST</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>What Passthru does:</em> When a call arrives, Exotel sends an HTTP request to your URL with call details (<code>CallSid</code>, <code>From</code>, <code>To</code>, <code>CallType</code>). Your server can process this and control what happens next. This replaces both ACS Event Grid and the IncomingCall webhook from the main architecture.</span></div></div>
+          <div class="pstep"><div class="pstep-num">8</div><div class="pstep-text">After the Passthru Applet, add the <strong>Voicebot Applet</strong> (or <strong>Stream Applet</strong>). Configure it with:<br>
+            • <strong>WebSocket URL</strong> → <code>wss://your-server.com/audio</code><br>
+            • <strong>Audio format</strong> → <code>PCM 8kHz 16-bit mono</code> (Exotel's default streaming format)<br>
+            • <strong>Direction</strong> → <code>Bidirectional</code> (both send and receive audio)<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Voicebot vs Stream Applet:</em> The <strong>Voicebot Applet</strong> supports <strong>bidirectional</strong> audio (you can both listen to the caller AND speak back through the same WebSocket). The Stream Applet is unidirectional (listen only). For an AI voice bot, you need the Voicebot Applet.</span></div></div>
+          <div class="pstep"><div class="pstep-num">9</div><div class="pstep-text">Assign this flow to your <strong>ExoPhone</strong>: Go to <strong>ExoPhone</strong> settings → set <strong>Incoming call flow</strong> → select the flow you just created → <strong>Save</strong>.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Why:</em> This tells Exotel "when someone calls this number, execute this flow". Without this assignment, calls to your number will go to the default handler (usually a greeting or voicemail).</span></div></div>
+
+          <div class="phase-section-title">Step 4 — Server Code for Exotel Integration</div>
+          <div class="pstep"><div class="pstep-num">10</div><div class="pstep-text">Your server needs two endpoints: a <strong>webhook</strong> for call notifications and a <strong>WebSocket</strong> for audio streaming. Add this to your Express server:</div></div>
+          <div class="pcode"><span class="cmt">// ① Passthru Applet webhook — called when a call arrives</span>
+app.<span class="fn">post</span>(<span class="str">'/api/exotel-incoming'</span>, (req, res) => {
+  <span class="kw">const</span> { CallSid, From, To, CallType } = req.body;
+  console.<span class="fn">log</span>(<span class="str">`Incoming call: ${CallSid} from ${From} to ${To}`</span>);
+
+  <span class="cmt">// Return 200 to let the flow continue to the Voicebot Applet</span>
+  res.<span class="fn">sendStatus</span>(200);
+});
+
+<span class="cmt">// ② WebSocket handler — Exotel streams audio here</span>
+<span class="kw">const</span> WebSocket = <span class="fn">require</span>(<span class="str">'ws'</span>);
+<span class="kw">const</span> wss = <span class="kw">new</span> WebSocket.<span class="fn">Server</span>({ noServer: <span class="kw">true</span> });
+
+server.<span class="fn">on</span>(<span class="str">'upgrade'</span>, (req, socket, head) => {
+  <span class="kw">if</span> (req.url === <span class="str">'/audio'</span>) {
+    wss.<span class="fn">handleUpgrade</span>(req, socket, head, (ws) => {
+      wss.<span class="fn">emit</span>(<span class="str">'connection'</span>, ws, req);
+    });
+  }
+});
+
+wss.<span class="fn">on</span>(<span class="str">'connection'</span>, (ws) => {
+  console.<span class="fn">log</span>(<span class="str">'Exotel audio stream connected'</span>);
+
+  ws.<span class="fn">on</span>(<span class="str">'message'</span>, (data) => {
+    <span class="cmt">// data contains audio + metadata from Exotel</span>
+    <span class="cmt">// Parse the JSON metadata frame or raw PCM audio</span>
+    <span class="cmt">// → Pipe PCM audio to your STT engine</span>
+    <span class="cmt">// → Get transcript → Send to LLM → Get response</span>
+    <span class="cmt">// → Convert to audio via TTS → Send back over ws</span>
+  });
+
+  ws.<span class="fn">on</span>(<span class="str">'close'</span>, () => {
+    console.<span class="fn">log</span>(<span class="str">'Exotel audio stream disconnected'</span>);
+  });
+});</div>
+          <div class="pstep"><div class="pstep-num">11</div><div class="pstep-text">Exotel streams audio as <strong>PCM 8kHz, 16-bit, mono</strong> (little-endian). The first WebSocket message is a JSON metadata frame with the <code>StreamSid</code> and call details. Subsequent messages are raw audio bytes.<br><span style="color:#4a6080;font-size:.68rem">↳ <em>Important:</em> To send audio back to the caller (TTS response), send PCM audio frames back over the same WebSocket in the same format (8kHz 16-bit mono PCM). Exotel injects them into the live call.</span></div></div>
+          <div class="pwarn"><span class="pwarn-icon">⚠</span><strong>Audio format note:</strong> Exotel uses <strong>8kHz PCM</strong>, while ACS uses <strong>16kHz PCM</strong>. If your STT/TTS pipeline expects 16kHz, you'll need to <strong>upsample</strong> the incoming audio (8→16kHz) and <strong>downsample</strong> the outgoing audio (16→8kHz). Libraries like <code>audiobuffer-to-wav</code> or simple linear interpolation can handle this.</div>
+
+          <div class="phase-section-title">ACS vs Exotel — Quick Comparison</div>
+          <table class="ptable">
+            <tr><th>Feature</th><th>ACS (Phase 2)</th><th>Exotel (Phase 2B)</th></tr>
+            <tr><td><strong>Indian numbers</strong></td><td>❌ Not available</td><td><strong>✅ Toll-free + virtual numbers</strong></td></tr>
+            <tr><td><strong>Number purchase</strong></td><td>Requires Pay-As-You-Go + supported region</td><td>KYC required, 1–3 days activation</td></tr>
+            <tr><td><strong>Call event delivery</strong></td><td>ACS → Event Grid → webhook</td><td>Passthru Applet → direct webhook</td></tr>
+            <tr><td><strong>Audio streaming</strong></td><td>WebSocket, PCM 16kHz 16-bit mono</td><td>WebSocket, PCM 8kHz 16-bit mono</td></tr>
+            <tr><td><strong>Bidirectional audio</strong></td><td>✅ Via MediaStreaming</td><td>✅ Via Voicebot Applet</td></tr>
+            <tr><td><strong>Call flow builder</strong></td><td>Code-only (SDK)</td><td>Visual drag-and-drop + code</td></tr>
+            <tr><td><strong>SDK</strong></td><td><code>@azure/communication-call-automation</code></td><td>REST API + WebSocket (no npm SDK needed)</td></tr>
+            <tr><td><strong>Cost (number)</strong></td><td>~$1–2/month</td><td>Varies by plan (contact Exotel sales)</td></tr>
+          </table>
+
+          <div class="ptip"><span class="ptip-icon">💡</span><strong>Next steps after Exotel setup:</strong> You can <strong>skip Phase 4 (Event Grid Subscription)</strong> entirely — Exotel's Passthru Applet replaces Event Grid. Continue with Phase 3 (Deploy Server), Phase 5 (Env Variables — use Exotel credentials), and then build your AI pipeline (STT → LLM → TTS) which is the same regardless of telephony provider.</div>
+          <div class="pnote"><span class="pnote-icon">ℹ</span><strong>Exotel Docs:</strong> For detailed API reference, call flow setup, and Voicebot Applet configuration, visit <a href="https://developer.exotel.com" target="_blank">developer.exotel.com</a>. Check the <strong>Voice Streaming</strong> and <strong>Voicebot</strong> sections specifically.</div>
         </div>
       </div>
     </div>
 
     <!-- PHASE 3 -->
+
     <div class="phase" id="ph3">
       <div class="phase-header" onclick="togglePhase('ph3')">
         <div class="phase-num" style="background:linear-gradient(135deg,#064e3b,#059669);">3</div>

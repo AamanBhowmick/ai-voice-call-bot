@@ -2,12 +2,10 @@
  * Entry Point — starts the HTTP server (Express) and WebSocket server (ws)
  * on the same port, routing upgrades to the WS server for /audio connections.
  */
-
-import http from "http";
 import { createServer as createHttpServer } from "http";
 import app from "./app.ts";
-import { createWsServer } from "./services/wsServer.ts";
 import logger from "./logger.ts";
+import { createWsServer } from "./services/wsServer.ts";
 
 const PORT = parseInt(process.env.PORT ?? "3000", 10);
 
